@@ -81,6 +81,7 @@ func New(cfg Config) (*Server, error) {
 		analysis: newAnalysisCache(), ctx: ctx, cancel: cancel,
 	}
 	s.auth = auth.New(cfg.Auth, st)
+	s.loadSettings()
 
 	active, err := st.LoadActive()
 	if err != nil {
@@ -340,4 +341,35 @@ func (s *Server) fetchJoseki(ctx context.Context) error {
 	}
 	s.LoadJoseki()
 	return nil
+}
+
+// ---- persisted settings ----------------------------------------------
+
+type settings struct {
+	KataGo *katago.Config `json:"katago,omitempty"`
+}
+
+func (s *Server) settingsPath() string { return filepath.Join(s.cfg.DataDir, "settings.json") }
+
+// loadSettings applies saved in-app settings over the command-line defaults.
+func (s *Server) loadSettings() {
+	b, err := os.ReadFile(s.settingsPath())
+	if err != nil {
+		return
+	}
+	var st settings
+	if json.Unmarshal(b, &st) == nil && st.KataGo != nil {
+		s.cfg.KataGo = *st.KataGo
+	}
+}
+
+func (s *Server) saveSettings() error {
+	s.kgMu.RLock()
+	kc := s.cfg.KataGo
+	s.kgMu.RUnlock()
+	b, err := json.MarshalIndent(settings{KataGo: &kc}, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(s.settingsPath(), b, 0o644)
 }

@@ -645,6 +645,10 @@ func (s *Server) handleKataGoConfig(w http.ResponseWriter, r *http.Request) {
 	s.cfg.KataGo.Binary, s.cfg.KataGo.Model, s.cfg.KataGo.Config = c.Binary, c.Model, c.Config
 	s.kgErr = ""
 	s.kgMu.Unlock()
+	if err := s.saveSettings(); err != nil {
+		writeJSON(w, 500, apiError{"could not save settings: " + err.Error()})
+		return
+	}
 	s.StartKataGo()
 	writeJSON(w, 202, s.katagoStatus())
 }

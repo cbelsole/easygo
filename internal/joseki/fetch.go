@@ -32,6 +32,7 @@ func FetchKogo(ctx context.Context, dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	req.Header.Set("User-Agent", "easygo/0.1 (personal joseki study tool; downloads Kogo's Joseki Dictionary once)")
 	cl := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := cl.Do(req)
 	if err != nil {

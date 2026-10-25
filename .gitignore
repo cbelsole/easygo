@@ -5,3 +5,5 @@ bin/
 *.db-*
 data/cache/
 /katago/
+node_modules/
+web/dist/

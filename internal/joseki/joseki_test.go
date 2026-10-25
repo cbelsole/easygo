@@ -149,7 +149,7 @@ func TestSmallBoardsDisabled(t *testing.T) {
 // then the hane) is recognized in its own corner and, mirrored,
 // in another one. Skipped when the dictionary has not been fetched.
 func TestRealDictionary(t *testing.T) {
-	path := filepath.Join("..", "..", "data", "cache", "kjd", "Kogo's Joseki Dictionary.sgf")
+	path := filepath.Join("..", "..", "data", "cache", KogoFile)
 	if _, err := os.Stat(path); err != nil {
 		t.Skip("dictionary not fetched")
 	}

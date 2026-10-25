@@ -488,3 +488,25 @@ func TestScoringJudgesDeadStonesWithKataGo(t *testing.T) {
 	}
 	t.Logf("result %s", done.Result)
 }
+
+func TestKataGoSettingsPersist(t *testing.T) {
+	dir := t.TempDir()
+	cfg := Config{DataDir: dir, Auth: auth.Config{Secret: []byte("0123456789abcdef0123456789abcdef"), DevLogin: true}}
+	s1, _ := New(cfg)
+	ts := httptest.NewServer(s1.Handler())
+	jar, _ := cookiejar.New(nil)
+	cl := &client{&testEnv{t, s1, ts}, &http.Client{Jar: jar}}
+	cl.do("POST", "/api/auth/dev-login", map[string]string{"name": "Ann"}, nil)
+	// Nonexistent paths: the change is saved, KataGo reports why it cannot start.
+	if code, _ := cl.do("PUT", "/api/katago", map[string]string{"binary": "C:/nope/katago.exe", "model": "C:/nope/m.bin.gz", "config": "C:/nope/a.cfg"}, nil); code != 202 {
+		t.Fatalf("put katago: %d", code)
+	}
+	ts.Close()
+	s1.Close()
+
+	s2, _ := New(Config{DataDir: dir, Auth: cfg.Auth})
+	defer s2.Close()
+	if got := s2.katagoStatus().Config.Binary; got != "C:/nope/katago.exe" {
+		t.Errorf("saved KataGo path not restored: %q", got)
+	}
+}
