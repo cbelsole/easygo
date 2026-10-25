@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { TreeNode } from "../api/types";
-import { buildSegments, hasUnloadedChildren, nodeMap, onMainLine, pathTo, rootId, step } from "./tree";
+import {
+  buildSegments,
+  hasUnloadedChildren,
+  nodeMap,
+  onMainLine,
+  pathTo,
+  rootId,
+  step,
+} from "./tree";
 
 const n = (id: number, parent: number, children: number[]): TreeNode => ({
   id,

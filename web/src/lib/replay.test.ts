@@ -37,7 +37,7 @@ describe("replay", () => {
 
 describe("libertyMap", () => {
   it("counts shared liberties for a connected group", () => {
-    const board = new Array<Color>(81).fill(0);
+    const board = Array.from<Color>({ length: 81 }).fill(0);
     board[0] = 1;
     board[1] = 1;
     const libs = libertyMap(board, 9);
@@ -58,7 +58,7 @@ describe("handicapPoints", () => {
 
 describe("totalLiberties", () => {
   it("counts each group once", () => {
-    const board = new Array<Color>(81).fill(0);
+    const board = Array.from<Color>({ length: 81 }).fill(0);
     board[0] = 1;
     board[1] = 1;
     board[80] = 1;

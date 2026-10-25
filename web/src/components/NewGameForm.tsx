@@ -26,7 +26,11 @@ const STRENGTHS = [
 
 const MODES: { id: Mode; label: string; help: string }[] = [
   { id: "live", label: "Live Game", help: "Play a game with clocks and scoring." },
-  { id: "teaching", label: "Teaching Game", help: "Free navigation, branches, comments and marks." },
+  {
+    id: "teaching",
+    label: "Teaching Game",
+    help: "Free navigation, branches, comments and marks.",
+  },
   { id: "joseki", label: "Joseki Example", help: "Build an example sequence you can annotate." },
 ];
 
@@ -116,7 +120,11 @@ export function NewGameForm({ config, onCreated }: Props) {
 
       <label className="field">
         <span>Name</span>
-        <input value={name} placeholder={defaultName(mode)} onChange={(e) => setName(e.target.value)} />
+        <input
+          value={name}
+          placeholder={defaultName(mode)}
+          onChange={(e) => setName(e.target.value)}
+        />
       </label>
 
       <div className="grid2">
@@ -148,7 +156,10 @@ export function NewGameForm({ config, onCreated }: Props) {
           <div className="grid2">
             <label className="field">
               <span>Ko</span>
-              <select value={rules.ko} onChange={(e) => setRule("ko", e.target.value as Rules["ko"])}>
+              <select
+                value={rules.ko}
+                onChange={(e) => setRule("ko", e.target.value as Rules["ko"])}
+              >
                 <option value="SIMPLE">Simple</option>
                 <option value="POSITIONAL">Positional superko</option>
                 <option value="SITUATIONAL">Situational superko</option>
@@ -166,7 +177,10 @@ export function NewGameForm({ config, onCreated }: Props) {
             </label>
             <label className="field">
               <span>Tax</span>
-              <select value={rules.tax} onChange={(e) => setRule("tax", e.target.value as Rules["tax"])}>
+              <select
+                value={rules.tax}
+                onChange={(e) => setRule("tax", e.target.value as Rules["tax"])}
+              >
                 <option value="NONE">None</option>
                 <option value="SEKI">Seki</option>
                 <option value="ALL">All</option>
@@ -241,7 +255,10 @@ export function NewGameForm({ config, onCreated }: Props) {
               />
               Friend on this screen
             </label>
-            <label className={opponent === "ai" ? "seg-on" : ""} title={katago ? undefined : "KataGo is not running"}>
+            <label
+              className={opponent === "ai" ? "seg-on" : ""}
+              title={katago ? undefined : "KataGo is not running"}
+            >
               <input
                 type="radio"
                 name="opp"
@@ -263,8 +280,8 @@ export function NewGameForm({ config, onCreated }: Props) {
           </div>
           {!katago && (
             <p className="muted">
-              KataGo is not running{config.katago.error ? ` (${config.katago.error})` : ""}. Set its paths in
-              Settings below.
+              KataGo is not running{config.katago.error ? ` (${config.katago.error})` : ""}. Set its
+              paths in Settings below.
             </p>
           )}
           {opponent !== "local" && (
@@ -296,7 +313,11 @@ export function NewGameForm({ config, onCreated }: Props) {
         <fieldset>
           <legend>Clock</legend>
           <label className="check">
-            <input type="checkbox" checked={useClock} onChange={(e) => setUseClock(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={useClock}
+              onChange={(e) => setUseClock(e.target.checked)}
+            />
             Use a clock
           </label>
           <div className="grid3" aria-disabled={!useClock}>

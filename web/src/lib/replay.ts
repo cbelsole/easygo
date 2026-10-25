@@ -67,7 +67,7 @@ function groupAt(board: Color[], size: number, start: number) {
 }
 
 export function libertyMap(board: Color[], size: number): number[] {
-  const out = new Array<number>(board.length).fill(0);
+  const out = Array.from<number>({ length: board.length }).fill(0);
   const done = new Set<number>();
   board.forEach((c, i) => {
     if (c === 0 || done.has(i)) return;
@@ -82,7 +82,7 @@ export function libertyMap(board: Color[], size: number): number[] {
 
 /** Replay moves (root excluded) onto an empty or handicap board. Captures only; legality is the server's job. */
 export function replay(size: number, handicap: number, moves: TreeNode[]): Position {
-  const board = new Array<Color>(size * size).fill(0);
+  const board = Array.from<Color>({ length: size * size }).fill(0);
   for (const p of handicapPoints(size, handicap)) board[p.y * size + p.x] = 1;
   const captures: [number, number] = [0, 0];
   let lastMove: Point | undefined;
@@ -106,7 +106,7 @@ export function replay(size: number, handicap: number, moves: TreeNode[]): Posit
       const g = groupAt(board, size, nb);
       if (g.libs.size > 0) continue;
       for (const s of g.stones) board[s] = 0;
-      captures[m.color - 1] += g.stones.length;
+      captures[m.color === 1 ? 0 : 1] += g.stones.length;
     }
     const own = groupAt(board, size, at);
     if (own.libs.size === 0) for (const s of own.stones) board[s] = 0;

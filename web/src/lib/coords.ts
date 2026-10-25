@@ -31,7 +31,10 @@ export function starPoints(size: number): Point[] {
 
 export const indexOf = (p: Point, size: number): number => p.y * size + p.x;
 
-export const pointAt = (i: number, size: number): Point => ({ x: i % size, y: Math.floor(i / size) });
+export const pointAt = (i: number, size: number): Point => ({
+  x: i % size,
+  y: Math.floor(i / size),
+});
 
 export const inBounds = (p: Point, size: number): boolean =>
   p.x >= 0 && p.y >= 0 && p.x < size && p.y < size;

@@ -46,7 +46,11 @@ export function PlayerCard({ color, player, clock, captures, active, receivedAt,
           <span className="clock-time">{formatClock(reading)}</span>
           {reading.inByo && <span className="clock-phase">byo-yomi</span>}
           {clock.byoConfigured && total > 0 && (
-            <span className="periods" role="img" aria-label={`${reading.periods} of ${total} periods left`}>
+            <span
+              className="periods"
+              role="img"
+              aria-label={`${reading.periods} of ${total} periods left`}
+            >
               {Array.from({ length: total }, (_, i) => (
                 <span key={i} className={i < reading.periods ? "dot dot-on" : "dot"} />
               ))}

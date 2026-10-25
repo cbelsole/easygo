@@ -45,7 +45,11 @@ export function Board(props: BoardProps) {
     () => new Set((props.dead ?? []).map((p) => indexOf(p, size))),
     [props.dead, size],
   );
-  const toPoint = (e: { clientX: number; clientY: number; currentTarget: Element }): Point | null => {
+  const toPoint = (e: {
+    clientX: number;
+    clientY: number;
+    currentTarget: Element;
+  }): Point | null => {
     const r = e.currentTarget.getBoundingClientRect();
     const x = Math.round(min + ((e.clientX - r.left) / r.width) * span);
     const y = Math.round(min + ((e.clientY - r.top) / r.height) * span);
@@ -166,12 +170,7 @@ export function Board(props: BoardProps) {
               {style?.status === "seki" && (
                 <circle className="seki-ring" cx={x} cy={y} r={STONE_R + 0.12} />
               )}
-              <circle
-                className="stone-shadow"
-                cx={x + 0.05}
-                cy={y + 0.07}
-                r={STONE_R}
-              />
+              <circle className="stone-shadow" cx={x + 0.05} cy={y + 0.07} r={STONE_R} />
               <circle
                 className={c === 1 ? "stone stone-black" : "stone stone-white"}
                 cx={x}
@@ -287,10 +286,14 @@ function MarkLayer({ marks, stones, size }: { marks: Mark[]; stones: Color[]; si
                 d={`M${m.x} ${m.y - r}L${m.x + r} ${m.y + r * 0.8}L${m.x - r} ${m.y + r * 0.8}Z`}
               />
             )}
-            {m.kind === "square" && <rect x={m.x - r * 0.85} y={m.y - r * 0.85} width={r * 1.7} height={r * 1.7} />}
+            {m.kind === "square" && (
+              <rect x={m.x - r * 0.85} y={m.y - r * 0.85} width={r * 1.7} height={r * 1.7} />
+            )}
             {m.kind === "circle" && <circle cx={m.x} cy={m.y} r={r} />}
             {m.kind === "cross" && (
-              <path d={`M${m.x - r} ${m.y - r}L${m.x + r} ${m.y + r}M${m.x + r} ${m.y - r}L${m.x - r} ${m.y + r}`} />
+              <path
+                d={`M${m.x - r} ${m.y - r}L${m.x + r} ${m.y + r}M${m.x + r} ${m.y - r}L${m.x - r} ${m.y + r}`}
+              />
             )}
           </g>
         );

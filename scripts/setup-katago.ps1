@@ -37,9 +37,23 @@ foreach ($r in $releases) {
 }
 if (-not $asset) { throw "No Windows '$Backend' build found in the 15 newest KataGo releases." }
 
-$zip = Join-Path $Dir "dl\$($asset.name)"
-if (-not (Test-Path $zip)) { Invoke-WebRequest $asset.browser_download_url -OutFile $zip -Headers $headers }
-Expand-Archive -Path $zip -DestinationPath (Join-Path $Dir "bin") -Force
+$binDir = Join-Path $Dir "bin"
+$stamp = Join-Path $binDir ".installed"
+$installed = if (Test-Path $stamp) { (Get-Content $stamp -Raw).Trim() } else { "" }
+if ($installed -eq $asset.name -and (Test-Path (Join-Path $binDir "katago.exe"))) {
+  # Already current. Leaving it alone also avoids replacing a katago.exe that
+  # a running easygo server has open, which Windows refuses.
+  Write-Host "Engine already installed ($installed)."
+} else {
+  $zip = Join-Path $Dir "dl\$($asset.name)"
+  if (-not (Test-Path $zip)) { Invoke-WebRequest $asset.browser_download_url -OutFile $zip -Headers $headers }
+  try {
+    Expand-Archive -Path $zip -DestinationPath $binDir -Force
+  } catch {
+    throw "Could not replace the engine in $binDir. If easygo or katago is running, stop it and run this again. ($($_.Exception.Message))"
+  }
+  Set-Content -Path $stamp -Value $asset.name
+}
 $cfg = Join-Path $Dir "analysis.cfg"
 if (-not (Test-Path $cfg)) { Copy-Item (Join-Path $Dir "bin\analysis_example.cfg") $cfg }
 

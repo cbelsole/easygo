@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
-import type {
-  AppConfig,
-  GameView,
-  Judgment,
-  Point,
-  ShapeFinding,
-  TreeNode,
-} from "../api/types";
+import type { AppConfig, GameView, Judgment, Point, ShapeFinding, TreeNode } from "../api/types";
 import { useGame } from "../hooks/useGame";
 import { useNow } from "../hooks/useNow";
 import { useRemote } from "../hooks/useRemote";
@@ -25,7 +18,13 @@ import {
 import { replay, totalLiberties, type Position } from "../lib/replay";
 import { nodeMap, pathTo, step, type NavKey } from "../lib/tree";
 import { Board } from "./Board";
-import { AnalysisSummary, JosekiPanel, ShapesPanel, StrengthLegend, shapePoints } from "./HelpPanels";
+import {
+  AnalysisSummary,
+  JosekiPanel,
+  ShapesPanel,
+  StrengthLegend,
+  shapePoints,
+} from "./HelpPanels";
 import { MoveTree } from "./MoveTree";
 import { NodeEditor } from "./NodeEditor";
 import { PlayerCard } from "./PlayerCard";
@@ -96,6 +95,7 @@ function GameBody({
   onExit: () => void;
 }) {
   const toast = useToast();
+  const now = useNow(view.clock.some((c) => c.enabled && c.running));
   const live = view.mode === "live";
   const editable = !live && view.you.owner;
   const [on, setOn] = useState(DEFAULT_ON);
@@ -148,18 +148,24 @@ function GameBody({
     `${view.id}:${displayId}:${view.version}`,
     350,
   );
-  const liveEnv = { ...env, katagoBlocked: analysis.refused ?? undefined };
-  const avail = (k: FeatureKey) => availability(k, liveEnv);
-  const shown = (k: FeatureKey) => on[k] && avail(k).enabled;
-
   const shapes = useRemote(
     on.shapes && atHead ? () => api.shapes(view.id) : null,
     `${view.id}:${view.cursor}:${view.version}`,
   );
   const joseki = useRemote(
-    shown("joseki") && atHead ? () => api.joseki(view.id) : null,
+    on.joseki && atHead && availability("joseki", env).enabled ? () => api.joseki(view.id) : null,
     `${view.id}:${view.cursor}:${view.version}`,
   );
+  const liveEnv = {
+    ...env,
+    katagoBlocked: analysis.refused ?? undefined,
+    blocked: {
+      ...(shapes.refused ? { shapes: shapes.refused } : {}),
+      ...(joseki.refused ? { joseki: joseki.refused } : {}),
+    },
+  };
+  const avail = (k: FeatureKey) => availability(k, liveEnv);
+  const shown = (k: FeatureKey) => on[k] && avail(k).enabled;
 
   const run = useCallback(
     async (fn: () => Promise<GameView>) => {
@@ -218,7 +224,8 @@ function GameBody({
   const onPoint = (p: Point) => {
     if (scoringClicks) {
       const isDead = view.dead.some((d) => samePoint(d, p));
-      if (view.board[indexOf(p, view.size)] !== 0) void run(() => api.markDead(view.id, p, !isDead));
+      if (view.board[indexOf(p, view.size)] !== 0)
+        void run(() => api.markDead(view.id, p, !isDead));
       return;
     }
     if (marking && tool) {
@@ -253,7 +260,10 @@ function GameBody({
     strength: shown("strength"),
   });
   const suggestions = shown("katago") ? (analysis.data?.suggestions ?? []).slice(0, 6) : [];
-  const josekiNext = shown("joseki") && atHead ? (joseki.data?.corners ?? []).flatMap((c) => (c.status === "joseki" ? c.next : [])) : [];
+  const josekiNext =
+    shown("joseki") && atHead
+      ? (joseki.data?.corners ?? []).flatMap((c) => (c.status === "joseki" ? c.next : []))
+      : [];
   const shapeHighlight = shapePoints(hoverShape);
 
   const saveNode = (f: { comment: string; name: string; judgment: Judgment }) =>
@@ -294,7 +304,11 @@ function GameBody({
           {seat === 0 ? (
             <>
               <span>This game has an open seat.</span>
-              <button className="btn btn-primary" disabled={busy} onClick={() => void run(() => api.join(view.id))}>
+              <button
+                className="btn btn-primary"
+                disabled={busy}
+                onClick={() => void run(() => api.join(view.id))}
+              >
                 Join game
               </button>
             </>
@@ -311,7 +325,7 @@ function GameBody({
         captures={pos.captures[1]}
         active={playing && pos.toPlay === 2 && atHead}
         receivedAt={receivedAt}
-        now={useNow(view.clock.some((c) => c.enabled && c.running))}
+        now={now}
       />
 
       <div className="game-main">
@@ -343,10 +357,13 @@ function GameBody({
           <section className="panel-section">
             <h3>
               Move {pos.moveNumber}
-              {playing && <span className="muted"> - {pos.toPlay === 1 ? "Black" : "White"} to play</span>}
+              {playing && (
+                <span className="muted"> - {pos.toPlay === 1 ? "Black" : "White"} to play</span>
+              )}
             </h3>
             <p className="muted">
-              Libs: B {totalLiberties(pos.board, view.size, 1)} W {totalLiberties(pos.board, view.size, 2)}
+              Libs: B {totalLiberties(pos.board, view.size, 1)} W{" "}
+              {totalLiberties(pos.board, view.size, 2)}
             </p>
             {live && !atHead && (
               <div className="banner banner-history" role="status">
@@ -382,24 +399,38 @@ function GameBody({
               ))}
               {editable && node && node.color !== 0 && (
                 <>
-                  <button className="btn" disabled={busy} onClick={() => void run(() => api.promote(view.id, displayId))}>
+                  <button
+                    className="btn"
+                    disabled={busy}
+                    onClick={() => void run(() => api.promote(view.id, displayId))}
+                  >
                     Promote branch
                   </button>
-                  <button className="btn btn-danger" disabled={busy} onClick={() => void run(() => api.deleteNode(view.id, displayId))}>
+                  <button
+                    className="btn btn-danger"
+                    disabled={busy}
+                    onClick={() => void run(() => api.deleteNode(view.id, displayId))}
+                  >
                     Delete branch
                   </button>
                 </>
               )}
             </div>
             {view.partial && (
-              <p className="muted">Large tree: only nearby moves are loaded. Step into a branch to load more.</p>
+              <p className="muted">
+                Large tree: only nearby moves are loaded. Step into a branch to load more.
+              </p>
             )}
           </section>
 
           {node && <NodeEditor node={node} editable={editable} onSave={(f) => void saveNode(f)} />}
 
           {(isFinished || view.status === "scoring") && (
-            <ScorePanel view={view} busy={busy} onAccept={() => void run(() => api.accept(view.id))} />
+            <ScorePanel
+              view={view}
+              busy={busy}
+              onAccept={() => void run(() => api.accept(view.id))}
+            />
           )}
 
           {humanVsHuman && playing && (
@@ -417,7 +448,8 @@ function GameBody({
                 Allow AI help
               </label>
               <p className="muted">
-                KataGo help is {view.aiAssist ? "on" : "off"}. Both players must agree before it is available.
+                KataGo help is {view.aiAssist ? "on" : "off"}. Both players must agree before it is
+                available.
               </p>
             </section>
           )}
@@ -490,7 +522,9 @@ function GameBody({
           {on.shapes && (
             <section className="panel-section">
               <h3>Shapes</h3>
-              {atHead ? (
+              {shapes.refused ? (
+                <p className="muted">{shapes.refused}</p>
+              ) : atHead ? (
                 <ShapesPanel findings={shapes.data} size={view.size} onHover={setHoverShape} />
               ) : (
                 <p className="muted">Shown for the live position.</p>
@@ -507,12 +541,16 @@ function GameBody({
         captures={pos.captures[0]}
         active={playing && pos.toPlay === 1 && atHead}
         receivedAt={receivedAt}
-        now={useNow(view.clock.some((c) => c.enabled && c.running))}
+        now={now}
       />
 
       <div className="bar">
         <div className="bar-actions">
-          <button className="btn" disabled={busy || !canPlay} onClick={() => void run(() => api.pass(view.id))}>
+          <button
+            className="btn"
+            disabled={busy || !canPlay}
+            onClick={() => void run(() => api.pass(view.id))}
+          >
             Pass
           </button>
           <button
@@ -524,7 +562,11 @@ function GameBody({
           >
             Resign
           </button>
-          <button className="btn" disabled={busy || !canUndo} onClick={() => void run(() => api.undo(view.id))}>
+          <button
+            className="btn"
+            disabled={busy || !canUndo}
+            onClick={() => void run(() => api.undo(view.id))}
+          >
             Undo
           </button>
           <button className="btn" aria-pressed={estimate} onClick={() => setEstimate((e) => !e)}>
@@ -550,7 +592,13 @@ const TOOLS: { id: Tool; label: string; glyph: string }[] = [
   { id: "cross", label: "Cross", glyph: "✕" },
 ];
 
-function ToolPalette({ tool, onChange }: { tool: Tool | null; onChange: (t: Tool | null) => void }) {
+function ToolPalette({
+  tool,
+  onChange,
+}: {
+  tool: Tool | null;
+  onChange: (t: Tool | null) => void;
+}) {
   return (
     <div className="row" role="toolbar" aria-label="Annotation tools">
       {TOOLS.map((t) => (

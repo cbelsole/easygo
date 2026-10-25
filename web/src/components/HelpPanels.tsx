@@ -1,4 +1,11 @@
-import type { Analysis, GameView, JosekiCorner, JosekiReport, Point, ShapeFinding } from "../api/types";
+import type {
+  Analysis,
+  GameView,
+  JosekiCorner,
+  JosekiReport,
+  Point,
+  ShapeFinding,
+} from "../api/types";
 import { pointLabel } from "../lib/coords";
 
 const CORNERS: Record<JosekiCorner["corner"], string> = {
@@ -8,8 +15,15 @@ const CORNERS: Record<JosekiCorner["corner"], string> = {
   br: "Bottom right",
 };
 
-export function AnalysisSummary({ analysis, loading }: { analysis: Analysis | null; loading: boolean }) {
-  if (!analysis) return <p className="muted">{loading ? "Asking KataGo..." : "No analysis yet."}</p>;
+export function AnalysisSummary({
+  analysis,
+  loading,
+}: {
+  analysis: Analysis | null;
+  loading: boolean;
+}) {
+  if (!analysis)
+    return <p className="muted">{loading ? "Asking KataGo..." : "No analysis yet."}</p>;
   const black = Math.round(analysis.winrate * 1000) / 10;
   const lead = analysis.scoreLead;
   return (
@@ -21,7 +35,10 @@ export function AnalysisSummary({ analysis, loading }: { analysis: Analysis | nu
         Black {black}% / White {(100 - black).toFixed(1)}%
         <br />
         Score lead: {lead >= 0 ? "Black" : "White"} {Math.abs(lead).toFixed(1)}
-        <span className="muted"> ({analysis.visits} visits{loading ? ", updating" : ""})</span>
+        <span className="muted">
+          {" "}
+          ({analysis.visits} visits{loading ? ", updating" : ""})
+        </span>
       </p>
     </div>
   );
@@ -60,9 +77,7 @@ export function JosekiPanel({
           {c.status === "joseki" && c.next.length > 0 && (
             <p className="muted">
               Book continues:{" "}
-              {c.next
-                .map((n) => `${n.color === 1 ? "B" : "W"} ${pointLabel(n, size)}`)
-                .join(", ")}
+              {c.next.map((n) => `${n.color === 1 ? "B" : "W"} ${pointLabel(n, size)}`).join(", ")}
             </p>
           )}
         </li>

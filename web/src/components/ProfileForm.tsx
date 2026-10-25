@@ -14,7 +14,11 @@ export function ProfileForm({ user, onSaved }: { user: User; onSaved: (u: User) 
     e.preventDefault();
     setBusy(true);
     try {
-      const { user: u } = await api.updateMe({ name: name.trim(), rank: rank.trim(), location: location.trim() });
+      const { user: u } = await api.updateMe({
+        name: name.trim(),
+        rank: rank.trim(),
+        location: location.trim(),
+      });
       onSaved(u);
       toast.info("Profile saved.");
     } catch (err) {

@@ -16,6 +16,11 @@ describe("availability", () => {
     expect(a).toEqual({ enabled: false, reason: "AI help is off" });
   });
 
+  it("greys out a feature the server refused", () => {
+    const a = availability("shapes", { ...env, blocked: { shapes: "Both players must agree" } });
+    expect(a).toEqual({ enabled: false, reason: "Both players must agree" });
+  });
+
   it("follows the mode matrix", () => {
     expect(availability("katago", { ...env, mode: "joseki" }).enabled).toBe(false);
     expect(availability("annotations", env).enabled).toBe(false);

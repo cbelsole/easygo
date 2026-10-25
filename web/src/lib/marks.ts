@@ -21,7 +21,8 @@ export function nextLabel(marks: Mark[], family: "letters" | "numbers"): string 
   }
 }
 
-const kindOf = (tool: Tool): MarkKind => (tool === "letters" || tool === "numbers" ? "label" : tool);
+const kindOf = (tool: Tool): MarkKind =>
+  tool === "letters" || tool === "numbers" ? "label" : tool;
 
 /**
  * Apply a tool click: clicking a mark of the same shape removes it, otherwise it replaces
@@ -33,7 +34,10 @@ export function applyTool(marks: Mark[], p: Point, tool: Tool): Mark[] {
   const rest = marks.filter((m) => !samePoint(m, p));
   if (existing && existing.kind === kind) return rest;
   if (kind === "label") {
-    return [...rest, { x: p.x, y: p.y, kind, text: nextLabel(marks, tool as "letters" | "numbers") }];
+    return [
+      ...rest,
+      { x: p.x, y: p.y, kind, text: nextLabel(marks, tool as "letters" | "numbers") },
+    ];
   }
   return [...rest, { x: p.x, y: p.y, kind }];
 }

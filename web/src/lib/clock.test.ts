@@ -40,7 +40,11 @@ describe("readClock", () => {
   });
 
   it("flags when main time ends and there is no byo-yomi", () => {
-    const c = clock({ byoConfigured: false, periods: 0, config: { enabled: true, mainSeconds: 60, periods: 0, periodSeconds: 0 } });
+    const c = clock({
+      byoConfigured: false,
+      periods: 0,
+      config: { enabled: true, mainSeconds: 60, periods: 0, periodSeconds: 0 },
+    });
     expect(readClock(c, 61_000).flagged).toBe(true);
   });
 });

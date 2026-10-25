@@ -14,7 +14,7 @@ describe("nextLabel", () => {
   });
 
   it("continues past Z", () => {
-    const marks: Mark[] = [...("ABCDEFGHIJKLMNOPQRSTUVWXYZ")].map((t, i) => ({
+    const marks: Mark[] = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"].map((t, i) => ({
       x: i % 9,
       y: 0,
       kind: "label" as const,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Color } from "../api/types";
 import { addGhost, removeLastGhost } from "./ghosts";
 
-const empty = (): Color[] => new Array<Color>(81).fill(0);
+const empty = (): Color[] => Array.from<Color>({ length: 81 }).fill(0);
 
 describe("ghost stones", () => {
   it("alternate colors starting with the side to play", () => {

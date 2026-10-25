@@ -25,6 +25,8 @@ export interface Environment {
   /** Server-side message when analysis was refused (for example AI help is off). */
   katagoBlocked?: string;
   josekiLoaded: boolean;
+  /** Server refusals (403) per feature, shown as the reason. */
+  blocked?: Partial<Record<FeatureKey, string>>;
 }
 
 const NEEDS_KATAGO: FeatureKey[] = ["liveTerritory", "katago", "lifeDeath", "strength"];
@@ -38,9 +40,13 @@ export function availability(key: FeatureKey, env: Environment): Availability {
     if (env.katagoBlocked) return { enabled: false, reason: env.katagoBlocked };
   }
   if (key === "joseki") {
-    if (!playing) return { enabled: false, reason: "The book is the game itself in Joseki Example mode" };
-    if (!env.josekiLoaded) return { enabled: false, reason: "The joseki dictionary is not downloaded" };
+    if (!playing)
+      return { enabled: false, reason: "The book is the game itself in Joseki Example mode" };
+    if (!env.josekiLoaded)
+      return { enabled: false, reason: "The joseki dictionary is not downloaded" };
   }
+  const refusal = env.blocked?.[key];
+  if (refusal) return { enabled: false, reason: refusal };
   if (key === "annotations" && env.mode === "live") {
     return { enabled: false, reason: "Annotations are for Teaching and Joseki games" };
   }

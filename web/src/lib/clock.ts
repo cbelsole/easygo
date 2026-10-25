@@ -19,7 +19,8 @@ export function readClock(c: ClockView, elapsedMs: number): ClockReading {
   }
   if (c.inByo) return burnByo(c, c.periodMs, c.periods, elapsedMs);
   if (elapsedMs < c.mainMs) return { ...base, ms: c.mainMs - elapsedMs, flagged: false };
-  if (!c.byoConfigured || c.config.periods <= 0) return { inByo: false, ms: 0, periods: 0, flagged: true };
+  if (!c.byoConfigured || c.config.periods <= 0)
+    return { inByo: false, ms: 0, periods: 0, flagged: true };
   return burnByo(c, c.config.periodSeconds * 1000, c.periods, elapsedMs - c.mainMs, true);
 }
 

@@ -16,7 +16,11 @@ export function ScorePanel({ view, busy, onAccept }: Props) {
   const seated = view.you.seat !== 0;
   const mySide = view.you.seat;
   const iAccepted =
-    mySide === 3 ? view.accepted[0] && view.accepted[1] : mySide === 0 ? true : view.accepted[mySide - 1]!;
+    mySide === 3
+      ? view.accepted[0] && view.accepted[1]
+      : mySide === 0
+        ? true
+        : view.accepted[mySide - 1]!;
   return (
     <section className="panel-section">
       <h3>{view.status === "scoring" ? "Scoring" : "Score"}</h3>
@@ -54,7 +58,8 @@ export function ScorePanel({ view, busy, onAccept }: Props) {
       {view.status === "scoring" && (
         <>
           <p className="muted">
-            Accepted: Black {view.accepted[0] ? "yes" : "no"}, White {view.accepted[1] ? "yes" : "no"}
+            Accepted: Black {view.accepted[0] ? "yes" : "no"}, White{" "}
+            {view.accepted[1] ? "yes" : "no"}
           </p>
           {seated && (
             <button className="btn btn-primary" disabled={busy || iAccepted} onClick={onAccept}>

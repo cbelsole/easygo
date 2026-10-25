@@ -11,7 +11,7 @@ describe("labels", () => {
     expect(rowLabel(0, 19)).toBe("19");
     expect(rowLabel(18, 19)).toBe("1");
     expect(pointLabel({ x: 3, y: 15 }, 19)).toBe("D4");
-    expect(pointLabel({ x: 8, y: 0 }, 19)).toBe("K19");
+    expect(pointLabel({ x: 8, y: 0 }, 19)).toBe("J19");
   });
 });
 

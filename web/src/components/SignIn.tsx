@@ -3,7 +3,13 @@ import { api } from "../api/client";
 import type { AppConfig, User } from "../api/types";
 import { useToast } from "../hooks/useToast";
 
-export function SignIn({ config, onSignedIn }: { config: AppConfig; onSignedIn: (u: User) => void }) {
+export function SignIn({
+  config,
+  onSignedIn,
+}: {
+  config: AppConfig;
+  onSignedIn: (u: User) => void;
+}) {
   const toast = useToast();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
