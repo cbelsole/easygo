@@ -32,6 +32,8 @@ export interface BoardProps {
 }
 
 const STONE_R = 0.47;
+// Distance from the stone edge to the centre line of the strong/weak ring.
+const TINT_RING_OFFSET = 0.1;
 
 export function Board(props: BoardProps) {
   const { size, stones, showCoords } = props;
@@ -155,6 +157,23 @@ export function Board(props: BoardProps) {
         </g>
       )}
 
+      {/* Strong/weak rings sit below every stone so one never paints over a neighbour. */}
+      <g>
+        {stones.map((c, i) => {
+          const style = props.groupStyles?.get(i);
+          if (c === 0 || !style?.tint || deadSet.has(i) || style.status === "dead") return null;
+          return (
+            <circle
+              key={i}
+              className={`tint tint-${style.strength}`}
+              cx={i % size}
+              cy={Math.floor(i / size)}
+              r={STONE_R + TINT_RING_OFFSET}
+            />
+          );
+        })}
+      </g>
+
       <g>
         {stones.map((c, i) => {
           if (c === 0) return null;
@@ -164,9 +183,6 @@ export function Board(props: BoardProps) {
           const isDead = deadSet.has(i) || style?.status === "dead";
           return (
             <g key={i} opacity={isDead ? 0.4 : 1}>
-              {style?.tint && (
-                <circle className={`tint tint-${style.strength}`} cx={x} cy={y} r={STONE_R + 0.1} />
-              )}
               {style?.status === "seki" && (
                 <circle className="seki-ring" cx={x} cy={y} r={STONE_R + 0.12} />
               )}
