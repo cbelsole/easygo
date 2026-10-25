@@ -270,9 +270,15 @@ func (s *Server) handleShapes(w http.ResponseWriter, r *http.Request) {
 	var perr error
 	var key string
 	g.Lock(func() {
-		pos, perr = g.Tree.Position(g.Cursor)
+		n := g.Cursor
+		if id, _ := strconv.Atoi(r.URL.Query().Get("node")); id != 0 {
+			if f := g.Tree.Find(id); f != nil {
+				n = f
+			}
+		}
+		pos, perr = g.Tree.Position(n)
 		rules = g.Tree.Rules
-		key = fmt.Sprintf("%s/%d", g.ID, g.Cursor.ID)
+		key = fmt.Sprintf("%s/%d", g.ID, n.ID)
 	})
 	if perr != nil {
 		writeErr(w, perr)
@@ -332,7 +338,13 @@ func (s *Server) handleJosekiMatch(w http.ResponseWriter, r *http.Request) {
 	}
 	var ms []josekiCorner
 	g.Lock(func() {
-		for _, m := range db.Analyze(g.Tree, g.Cursor) {
+		n := g.Cursor
+		if id, _ := strconv.Atoi(r.URL.Query().Get("node")); id != 0 {
+			if f := g.Tree.Find(id); f != nil {
+				n = f
+			}
+		}
+		for _, m := range db.Analyze(g.Tree, n) {
 			c := josekiCorner{
 				Corner: string(m.Corner), Status: m.Status, Stones: m.Stones, Comment: m.Comment,
 				DeviatedAt: m.DeviatedAt, Swapped: m.Swapped, Next: []josekiSugg{},

@@ -29,6 +29,7 @@ type Meta struct {
 	Created  time.Time      `json:"created"`
 	Updated  time.Time      `json:"updated"`
 	Handicap int            `json:"handicap"`
+	Size     int            `json:"size"`
 	AIAssist bool           `json:"aiAssist"`
 	Local    bool           `json:"local"`
 	OwnerID  string         `json:"ownerId"`
@@ -56,7 +57,7 @@ func (g *Game) Snapshot() (Meta, string) {
 	defer g.mu.Unlock()
 	m := Meta{
 		ID: g.ID, Name: g.Name, Mode: g.Mode, Status: g.Status, Result: g.Result,
-		Created: g.Created, Updated: g.Updated, Handicap: g.Handicap, AIAssist: g.AIAssist,
+		Created: g.Created, Updated: g.Updated, Handicap: g.Handicap, Size: g.Tree.Size, AIAssist: g.AIAssist,
 		Local: g.Local, OwnerID: g.OwnerID, Rules: g.Tree.Rules, Clock: g.ClockCfg,
 		ClockNow:    g.Clock.Export(),
 		Accepted:    [2]bool{g.Accepted[board.Black], g.Accepted[board.White]},

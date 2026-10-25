@@ -147,3 +147,11 @@ Computer help is cheating between two people. In a live game between two network
 `/analysis`, `/shapes` and `/joseki` return 403 until **both** players have voted for AI help
 (`POST /assist`), and always for spectators while the game is in progress. Teaching, joseki,
 hot-seat, versus-KataGo and finished games are not restricted.
+
+## Reviewing history
+
+`GET /api/games/{id}?node=ID` returns the `GameView` for the position after that node (board,
+liberties, captures, handicap stones included). `you.canMove` is false in such a view.
+`/shapes` and `/joseki` take the same `node` parameter. `aiAssist` is the effective flag;
+`assistVotes` is `[black, white]` so a client can show who has agreed.
+`GameSummary.size` is the board size.

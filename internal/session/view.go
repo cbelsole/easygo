@@ -88,6 +88,8 @@ type GameView struct {
 	Score     *ScoreView `json:"score,omitempty"`
 	Accepted  [2]bool    `json:"accepted"`
 	AIAssist  bool       `json:"aiAssist"`
+	// AssistVotes is who has agreed to AI help: [black, white].
+	AssistVotes [2]bool `json:"assistVotes"`
 }
 
 type ScoreView struct {
@@ -99,22 +101,35 @@ type ScoreView struct {
 }
 
 // View snapshots the game for one viewer (userID may be empty).
-func (g *Game) View(userID string) GameView {
+func (g *Game) View(userID string) GameView { return g.ViewAt(userID, 0) }
+
+// ViewAt is View for the position after node nodeID (0 means the cursor), so a
+// client reviewing history gets the real board there, handicap stones included.
+// A historical view never lets anyone move.
+func (g *Game) ViewAt(userID string, nodeID int) GameView {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	t := g.Tree
+	cur := g.Cursor
+	if nodeID != 0 {
+		if n := t.Find(nodeID); n != nil {
+			cur = n
+		}
+	}
+	historical := cur != g.Cursor
 	v := GameView{
 		ID: g.ID, Name: g.Name, Mode: g.Mode, Status: g.Status, Result: g.Result,
 		Size: t.Size, Rules: t.Rules, Handicap: g.Handicap, Version: g.version,
-		Cursor: g.Cursor.ID, AIAssist: g.AIAssist,
-		Accepted: [2]bool{g.Accepted[board.Black], g.Accepted[board.White]},
-		Dead:     []XY{},
+		Cursor: cur.ID, AIAssist: g.AIAssist,
+		AssistVotes: [2]bool{g.AssistVotes[board.Black], g.AssistVotes[board.White]},
+		Accepted:    [2]bool{g.Accepted[board.Black], g.Accepted[board.White]},
+		Dead:        []XY{},
 	}
 
-	if pos := g.positionLocked(); pos != nil {
+	if pos, err := t.Position(cur); err == nil {
 		n := t.Size
 		v.ToPlay = int(pos.ToPlay)
-		v.MoveNumber = t.MoveNumber(g.Cursor)
+		v.MoveNumber = t.MoveNumber(cur)
 		v.Board = make([]int, n*n)
 		v.Liberties = make([]int, n*n)
 		for _, gr := range pos.Board.Groups() {
@@ -151,7 +166,7 @@ func (g *Game) View(userID string) GameView {
 	show := map[int]bool{}
 	if windowed {
 		v.Partial = true
-		for _, p := range t.Path(g.Cursor) {
+		for _, p := range t.Path(cur) {
 			show[p.ID] = true
 			for _, c := range p.Children {
 				show[c.ID] = true
@@ -210,9 +225,9 @@ func (g *Game) View(userID string) GameView {
 	}
 	switch g.Mode {
 	case ModeLive:
-		you.CanMove = g.Status == StatusPlaying && g.atTipLocked() && seat != board.Empty && seat == board.Color(v.ToPlay)
+		you.CanMove = !historical && g.Status == StatusPlaying && g.atTipLocked() && seat != board.Empty && seat == board.Color(v.ToPlay)
 	default:
-		you.CanMove = you.Owner
+		you.CanMove = you.Owner && !historical
 	}
 	v.You = you
 	return v

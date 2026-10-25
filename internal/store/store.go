@@ -204,7 +204,7 @@ func (s *Store) ListGames(userID string, limit int) ([]GameSummary, error) {
 		}
 		out = append(out, GameSummary{
 			ID: m.ID, Name: m.Name, Mode: string(m.Mode), Status: string(m.Status), Result: m.Result,
-			Updated: m.Updated.Unix(), Black: m.Players[0].Name, White: m.Players[1].Name, Owner: m.OwnerID,
+			Updated: m.Updated.Unix(), Black: m.Players[0].Name, White: m.Players[1].Name, Owner: m.OwnerID, Size: m.Size,
 		})
 		if limit > 0 && len(out) >= limit {
 			break

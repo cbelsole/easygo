@@ -654,3 +654,30 @@ func TestShapesAndJosekiFollowTheFairPlayRule(t *testing.T) {
 		t.Errorf("spectator shapes: %d", code)
 	}
 }
+
+func TestViewAtNodeAndListSize(t *testing.T) {
+	e := newEnv(t, katago.Config{})
+	ann := e.login("Ann")
+	v := ann.create(map[string]any{"size": 13, "opponent": "local", "handicap": 2})
+	// With a handicap, white moves first.
+	_, v1 := ann.move(v.ID, 6, 6)
+	var root session.GameView
+	ann.do("GET", "/api/games/"+v.ID+"?node="+itoa(v.Cursor), nil, &root)
+	stones := 0
+	for _, c := range root.Board {
+		if c == 1 {
+			stones++
+		}
+	}
+	if stones != 2 || root.MoveNumber != 0 || root.You.CanMove {
+		t.Errorf("root view: %d handicap stones, move %d, canMove %v", stones, root.MoveNumber, root.You.CanMove)
+	}
+	if v1.MoveNumber != 1 {
+		t.Errorf("latest view move %d", v1.MoveNumber)
+	}
+	var lists struct{ Mine []struct{ Size int } }
+	ann.do("GET", "/api/games", nil, &lists)
+	if len(lists.Mine) != 1 || lists.Mine[0].Size != 13 {
+		t.Errorf("list size: %+v", lists.Mine)
+	}
+}

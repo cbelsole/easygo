@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -369,7 +370,8 @@ func (s *Server) handleGet(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	writeJSON(w, 200, g.View(s.auth.UserID(r)))
+	node, _ := strconv.Atoi(r.URL.Query().Get("node"))
+	writeJSON(w, 200, g.ViewAt(s.auth.UserID(r), node))
 }
 
 func (s *Server) handleSGF(w http.ResponseWriter, r *http.Request) {
