@@ -127,3 +127,12 @@ when none is installed. Set `EASYGO_KATAGO_DIR` if it is not in `%USERPROFILE%\k
 * Joseki recognition covers 13x13 and 19x19 and needs 3 stones in a corner window.
 * The rank setting is a playing style learned from human games, not a calibrated rating. It is monotonic (verified by tests that play stronger ranks against weaker ones) but "16k" may feel a rank or two off.
 * KataGo setup uses the OpenCL build. CUDA/TensorRT are faster on NVIDIA cards but need a system-wide CUDA install.
+
+## License
+
+The code in this repository is released under the [MIT License](LICENSE).
+
+That covers this project only. Things it downloads or uses at run time keep their own terms:
+[KataGo](https://github.com/lightvector/KataGo) and its networks (see its repository for its license),
+and Kogo's Joseki Dictionary (copyright Gary Odom and contributors, fetched for personal use and not
+redistributable without the author's permission).
