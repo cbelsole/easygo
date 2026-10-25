@@ -32,8 +32,9 @@ export interface BoardProps {
 }
 
 const STONE_R = 0.47;
-// Distance from the stone edge to the centre line of the strong/weak ring.
-const TINT_RING_OFFSET = 0.1;
+// Distance from the stone edge to the centre line of the strong/weak ring: half
+// the ring's stroke-width (.tint in styles.css) so its inner edge meets the stone.
+const TINT_RING_OFFSET = 0.05;
 
 export function Board(props: BoardProps) {
   const { size, stones, showCoords } = props;
