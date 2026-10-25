@@ -151,3 +151,21 @@ func TestMultipleGames(t *testing.T) {
 		t.Fatalf("games=%d err=%v", len(gs), err)
 	}
 }
+
+func TestRulesRoundTrip(t *testing.T) {
+	g, err := Parse("(;SZ[9]RU[Chinese]KM[7.5];B[ee])")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.Rules.Scoring != board.ScoreArea || g.Rules.Komi != 7.5 {
+		t.Errorf("rules %+v", g.Rules)
+	}
+	g2, err := Parse(Write(g))
+	if err != nil || g2.Rules.Scoring != board.ScoreArea || g2.Rules.Komi != 7.5 {
+		t.Errorf("round trip lost rules: %v %+v", err, g2.Rules)
+	}
+	// Unknown rulesets fall back to the default instead of failing.
+	if g3, err := Parse("(;SZ[9]RU[Quantum])"); err != nil || g3.Rules.Scoring != board.ScoreTerritory {
+		t.Errorf("unknown ruleset: %v", err)
+	}
+}

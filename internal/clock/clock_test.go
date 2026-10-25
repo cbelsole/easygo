@@ -130,3 +130,18 @@ func TestDeadline(t *testing.T) {
 		t.Errorf("deadline in byo %v want %v", d, want)
 	}
 }
+
+func TestExportImportRoundTrip(t *testing.T) {
+	f := newFake()
+	c := New(Config{Enabled: true, MainSeconds: 10, Periods: 3, PeriodSeconds: 30}, f.now)
+	c.Start(board.Black)
+	f.advance(25 * time.Second) // into byo-yomi, 15s of the first period used
+	st := c.Export()
+
+	d := New(Config{Enabled: true, MainSeconds: 10, Periods: 3, PeriodSeconds: 30}, f.now)
+	d.Import(st)
+	v := d.Snapshot(board.Black)
+	if !v.InByo || v.PeriodMs != 15_000 || v.Periods != 3 || v.Running {
+		t.Errorf("imported view %+v", v)
+	}
+}

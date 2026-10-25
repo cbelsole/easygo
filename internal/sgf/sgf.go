@@ -227,6 +227,15 @@ func build(r *rawTree) (*tree.Tree, error) {
 	rules, _ := board.Preset("japanese")
 	t := tree.New(size, rules)
 
+	// The ruleset goes first so an explicit KM below overrides its komi.
+	for _, pr := range rootNode.props {
+		if pr.ident == "RU" {
+			if r, ok := ruleByName(first(pr.values)); ok {
+				t.Rules = r
+			}
+		}
+	}
+
 	// Handicap and komi are read first because they affect position setup.
 	for _, pr := range rootNode.props {
 		switch pr.ident {
@@ -334,7 +343,7 @@ func applyProps(t *tree.Tree, n *tree.Node, rn rawNode, isRoot bool) {
 					t.Info.Place = first(pr.values)
 				case "GN":
 					t.Info.GameName = first(pr.values)
-				case "SZ", "KM", "HA", "GM", "FF", "CA", "AP", "ST":
+				case "SZ", "KM", "HA", "GM", "FF", "CA", "AP", "ST", "RU":
 					// consumed or irrelevant
 				default:
 					keepProp(n, pr)
@@ -396,4 +405,20 @@ func encodePoint(p board.Point) string {
 		return ""
 	}
 	return string([]byte{byte('a' + p.X), byte('a' + p.Y)})
+}
+
+// ruleByName maps an SGF RU value to a preset. Unknown names keep the default.
+func ruleByName(s string) (board.Rules, bool) {
+	names := map[string]string{
+		"japanese": "japanese", "jp": "japanese", "korean": "korean",
+		"chinese": "chinese", "cn": "chinese", "aga": "aga", "nz": "new-zealand",
+		"new zealand": "new-zealand", "new-zealand": "new-zealand",
+		"tromp-taylor": "tromp-taylor", "tt": "tromp-taylor", "stone-scoring": "stone-scoring",
+	}
+	key := strings.ToLower(strings.TrimSpace(s))
+	if n, ok := names[key]; ok {
+		r, err := board.Preset(n)
+		return r, err == nil
+	}
+	return board.Rules{}, false
 }

@@ -27,6 +27,9 @@ func writeNode(sb *strings.Builder, t *tree.Tree, n *tree.Node, isRoot bool) {
 	sb.WriteString(";")
 	if isRoot {
 		fmt.Fprintf(sb, "GM[1]FF[4]CA[UTF-8]AP[easygo]SZ[%d]", t.Size)
+		if t.Rules.Preset != "" {
+			fmt.Fprintf(sb, "RU[%s]", t.Rules.Preset)
+		}
 		fmt.Fprintf(sb, "KM[%g]", t.Rules.Komi)
 		if t.Info.Handicap > 1 {
 			fmt.Fprintf(sb, "HA[%d]", t.Info.Handicap)

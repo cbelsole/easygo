@@ -216,3 +216,39 @@ func (c *Clock) Snapshot(color board.Color) View {
 		Running: c.running == color, ByoActive: c.byoConfigured(), Config: &cfg,
 	}
 }
+
+// State is a clock's persisted per-side remainder, in milliseconds.
+type State struct {
+	MainMs   int64 `json:"mainMs"`
+	PeriodMs int64 `json:"periodMs"`
+	Periods  int   `json:"periods"`
+	InByo    bool  `json:"inByo"`
+	Flagged  bool  `json:"flagged"`
+}
+
+// Export captures both sides so a restart can resume the game.
+func (c *Clock) Export() [2]State {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.settle()
+	var out [2]State
+	for i, col := range []board.Color{board.Black, board.White} {
+		s := c.sides[col]
+		out[i] = State{s.Main.Milliseconds(), s.Period.Milliseconds(), s.Periods, s.InByo, s.Flagged}
+	}
+	return out
+}
+
+// Import restores remainders saved by Export. The clock stays stopped.
+func (c *Clock) Import(st [2]State) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.running = board.Empty
+	for i, col := range []board.Color{board.Black, board.White} {
+		s := st[i]
+		c.sides[col] = Side{
+			Main: time.Duration(s.MainMs) * time.Millisecond, Period: time.Duration(s.PeriodMs) * time.Millisecond,
+			Periods: s.Periods, InByo: s.InByo, Flagged: s.Flagged,
+		}
+	}
+}
