@@ -55,7 +55,12 @@ if ($installed -eq $asset.name -and (Test-Path (Join-Path $binDir "katago.exe"))
   Set-Content -Path $stamp -Value $asset.name
 }
 $cfg = Join-Path $Dir "analysis.cfg"
-if (-not (Test-Path $cfg)) { Copy-Item (Join-Path $Dir "bin\analysis_example.cfg") $cfg }
+if (-not (Test-Path $cfg)) {
+  # The example writes logs to a relative folder, i.e. into whatever directory
+  # easygo is started from (the repo). Send them to the KataGo folder instead.
+  $logs = (Join-Path $Dir "logs") -replace '\\', '/'
+  (Get-Content (Join-Path $Dir "bin\analysis_example.cfg")) -replace '^logDir\s*=.*$', "logDir = $logs" | Set-Content $cfg
+}
 
 # --- network ------------------------------------------------------------
 if (-not $SkipNet) {
