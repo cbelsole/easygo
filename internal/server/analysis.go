@@ -63,28 +63,31 @@ func canAssist(g *session.Game, userID string) (bool, string) {
 	return ok, why
 }
 
-// ---- analysis cache -----------------------------------------------------
+// ---- result cache ---------------------------------------------------------
 
-type analysisCache struct {
+// cache is a small bounded map for per-position results. Positions never
+// change once a node exists, so a node id is a safe key.
+type cache[T any] struct {
 	mu    sync.Mutex
-	items map[string]*AnalysisResult
+	items map[string]T
 	order []string
 }
 
-func newAnalysisCache() *analysisCache { return &analysisCache{items: map[string]*AnalysisResult{}} }
+func newCache[T any]() *cache[T] { return &cache[T]{items: map[string]T{}} }
 
-func (c *analysisCache) get(k string) *AnalysisResult {
+func (c *cache[T]) get(k string) (T, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.items[k]
+	v, ok := c.items[k]
+	return v, ok
 }
 
-func (c *analysisCache) put(k string, v *AnalysisResult) {
+func (c *cache[T]) put(k string, v T) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if _, ok := c.items[k]; !ok {
 		c.order = append(c.order, k)
-		if len(c.order) > 128 {
+		if len(c.order) > 256 {
 			delete(c.items, c.order[0])
 			c.order = c.order[1:]
 		}
@@ -158,7 +161,7 @@ func (s *Server) analyze(ctx context.Context, g *session.Game, nodeID, visits in
 	if qerr != nil {
 		return nil, qerr
 	}
-	if c := s.analysis.get(key); c != nil {
+	if c, ok := s.analysis.get(key); ok {
 		return c, nil
 	}
 	q.MaxVisits, q.Ownership = visits, true
@@ -257,15 +260,26 @@ func (s *Server) handleShapes(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// The ladder reader is computer help like any other: same fair-play rule.
+	if allowed, why := canAssist(g, s.auth.UserID(r)); !allowed {
+		writeJSON(w, 403, apiError{why})
+		return
+	}
 	var pos *board.Position
 	var rules board.Rules
 	var perr error
+	var key string
 	g.Lock(func() {
 		pos, perr = g.Tree.Position(g.Cursor)
 		rules = g.Tree.Rules
+		key = fmt.Sprintf("%s/%d", g.ID, g.Cursor.ID)
 	})
 	if perr != nil {
 		writeErr(w, perr)
+		return
+	}
+	if cached, ok := s.shapes.get(key); ok {
+		writeJSON(w, 200, map[string]any{"findings": cached})
 		return
 	}
 	out := []shapeView{}
@@ -281,6 +295,7 @@ func (s *Server) handleShapes(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, v)
 	}
+	s.shapes.put(key, out)
 	writeJSON(w, 200, map[string]any{"findings": out})
 }
 
@@ -304,6 +319,10 @@ type josekiCorner struct {
 func (s *Server) handleJosekiMatch(w http.ResponseWriter, r *http.Request) {
 	g, ok := s.game(w, r)
 	if !ok {
+		return
+	}
+	if allowed, why := canAssist(g, s.auth.UserID(r)); !allowed {
+		writeJSON(w, 403, apiError{why})
 		return
 	}
 	db := s.josekiDB()

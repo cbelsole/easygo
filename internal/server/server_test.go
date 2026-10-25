@@ -628,3 +628,29 @@ func TestServesFrontendWithClientRoutes(t *testing.T) {
 		t.Errorf("health: %d", code)
 	}
 }
+
+// Computer help of any kind is off between two networked humans until both agree.
+func TestShapesAndJosekiFollowTheFairPlayRule(t *testing.T) {
+	e := newEnv(t, katago.Config{})
+	ann, bo := e.login("Ann"), e.login("Bo")
+	v := ann.create(map[string]any{"size": 19, "opponent": "open", "color": "black"})
+	bo.do("POST", "/api/games/"+v.ID+"/join", map[string]string{}, nil)
+	ann.move(v.ID, 3, 3)
+	for _, ep := range []string{"shapes", "joseki", "analysis"} {
+		if code, _ := ann.do("GET", "/api/games/"+v.ID+"/"+ep, nil, nil); code != 403 {
+			t.Errorf("%s before agreement: %d", ep, code)
+		}
+	}
+	ann.do("POST", "/api/games/"+v.ID+"/assist", map[string]bool{"on": true}, nil)
+	bo.do("POST", "/api/games/"+v.ID+"/assist", map[string]bool{"on": true}, nil)
+	for _, ep := range []string{"shapes", "joseki"} {
+		if code, _ := ann.do("GET", "/api/games/"+v.ID+"/"+ep, nil, nil); code != 200 {
+			t.Errorf("%s after both agreed: %d", ep, code)
+		}
+	}
+	// A spectator still gets nothing while the game is in progress.
+	cy := e.login("Cy")
+	if code, _ := cy.do("GET", "/api/games/"+v.ID+"/shapes", nil, nil); code != 403 {
+		t.Errorf("spectator shapes: %d", code)
+	}
+}

@@ -38,3 +38,13 @@ Easy Mode spec and these answers win over Joseki Dojo wherever they disagree.
 - **KataGo OpenCL build, not CUDA.** CUDA needs a system-wide CUDA/cuDNN install. OpenCL runs on the GPU driver alone.
 - **"Greyed out" (Q10)** means: disabled whenever KataGo is unavailable.
 - **Google OAuth** needs a client ID/secret only the account owner can create. A dev-login stub sits behind the same interface until then.
+- **Every kind of computer help follows the same fair-play rule** (KataGo analysis, the ladder/net/snapback
+  sensor, and the joseki suggester), not just KataGo. The spec lists the shape sensor for "All" modes; that holds
+  for every mode except live human-vs-human games, where it needs both players' agreement.
+- **Only administrators change KataGo paths or trigger downloads.** Pointing the server at a different executable
+  is code execution. With dev login (a personal local server) the user is the administrator; otherwise
+  `EASYGO_ADMINS` lists emails.
+- **"Strong / weak group" (FR-17) is derived from ownership certainty**, not from per-move value swings as the spec
+  suggested. A group KataGo is certain about (mean ownership 0.9 or more) is strong; one it barely holds is weak.
+  It is stable on a single position, where value swings need two.
+- **Large knight's move is the (2,3) offset.** The spec's "(1,3)" is not a standard named shape.

@@ -50,7 +50,8 @@ type Server struct {
 	kg       *katago.Client
 	kgErr    string
 	kgStart  bool // a start is in progress
-	analysis *analysisCache
+	analysis *cache[*AnalysisResult]
+	shapes   *cache[[]shapeView]
 	// gpu bounds concurrent analyses so one user cannot starve the rest.
 	gpu chan struct{}
 
@@ -84,7 +85,7 @@ func New(cfg Config) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{
 		cfg: cfg, store: st, games: map[string]*session.Game{}, timers: map[string]*time.Timer{}, exampleOf: map[string]string{},
-		analysis: newAnalysisCache(), gpu: make(chan struct{}, 6), ctx: ctx, cancel: cancel,
+		analysis: newCache[*AnalysisResult](), shapes: newCache[[]shapeView](), gpu: make(chan struct{}, 6), ctx: ctx, cancel: cancel,
 	}
 	s.auth = auth.New(cfg.Auth, st)
 	s.loadSettings()

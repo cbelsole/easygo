@@ -140,3 +140,10 @@ Only reported on 13x13 and 19x19, and once a corner has 3 or more stones.
 | `PUT /api/katago` | `{binary, model, config}`: saves and restarts KataGo; 202 |
 | `GET /api/joseki` | `{loaded, positions, source, error?}` |
 | `POST /api/joseki/fetch` | Downloads Kogo's Joseki Dictionary and rebuilds the index |
+
+## Fair play
+
+Computer help is cheating between two people. In a live game between two networked humans,
+`/analysis`, `/shapes` and `/joseki` return 403 until **both** players have voted for AI help
+(`POST /assist`), and always for spectators while the game is in progress. Teaching, joseki,
+hot-seat, versus-KataGo and finished games are not restricted.
