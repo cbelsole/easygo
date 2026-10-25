@@ -1,0 +1,7 @@
+bin/
+*.exe
+.env
+*.db
+*.db-*
+data/cache/
+/katago/
