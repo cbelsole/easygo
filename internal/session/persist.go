@@ -41,6 +41,8 @@ type Meta struct {
 	Dead      []board.Point  `json:"autoDead"`
 	Overrides []overrideMeta `json:"overrides"`
 	Accepted  [2]bool        `json:"accepted"`
+	// AssistVotes is who has agreed to AI help: [black, white].
+	AssistVotes [2]bool `json:"assistVotes"`
 }
 
 type overrideMeta struct {
@@ -56,8 +58,9 @@ func (g *Game) Snapshot() (Meta, string) {
 		ID: g.ID, Name: g.Name, Mode: g.Mode, Status: g.Status, Result: g.Result,
 		Created: g.Created, Updated: g.Updated, Handicap: g.Handicap, AIAssist: g.AIAssist,
 		Local: g.Local, OwnerID: g.OwnerID, Rules: g.Tree.Rules, Clock: g.ClockCfg,
-		ClockNow: g.Clock.Export(),
-		Accepted: [2]bool{g.Accepted[board.Black], g.Accepted[board.White]},
+		ClockNow:    g.Clock.Export(),
+		Accepted:    [2]bool{g.Accepted[board.Black], g.Accepted[board.White]},
+		AssistVotes: [2]bool{g.AssistVotes[board.Black], g.AssistVotes[board.White]},
 	}
 	for i, c := range []board.Color{board.Black, board.White} {
 		p := g.Players[c]
@@ -116,6 +119,9 @@ func Restore(m Meta, record string) (*Game, error) {
 		g.Overrides[o.Pt] = o.Dead
 	}
 	g.Accepted[board.Black], g.Accepted[board.White] = m.Accepted[0], m.Accepted[1]
+	g.AssistVotes[board.Black], g.AssistVotes[board.White] = m.AssistVotes[0], m.AssistVotes[1]
+	g.assistDefault = g.Local || g.Players[board.Black].Kind == "ai" || g.Players[board.White].Kind == "ai"
+	g.recomputeAssistLocked()
 	g.Clock = clock.New(m.Clock, nil)
 	g.Clock.Import(m.ClockNow)
 	if g.Mode == ModeLive && g.Status == StatusPlaying {

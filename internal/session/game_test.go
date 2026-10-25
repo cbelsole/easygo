@@ -258,3 +258,59 @@ func TestBadSize(t *testing.T) {
 		t.Errorf("size 17: %v", err)
 	}
 }
+
+func TestAssistRequiresBothHumans(t *testing.T) {
+	g := networked(t)
+	if g.AIAssist {
+		t.Fatal("AI help must start off between two networked humans")
+	}
+	g.SetAssist("u1", true)
+	if g.AIAssist {
+		t.Error("one vote is not enough")
+	}
+	g.SetAssist("u2", true)
+	if !g.AIAssist {
+		t.Error("both voted yes")
+	}
+	g.SetAssist("u1", false)
+	if g.AIAssist {
+		t.Error("withdrawing a vote turns it off")
+	}
+	if err := g.SetAssist("stranger", true); err != ErrNotYours {
+		t.Errorf("spectator vote: %v", err)
+	}
+}
+
+func TestAssistOnWithSingleHuman(t *testing.T) {
+	g, _ := New(Options{Mode: ModeLive, Size: 9, Rules: rules(t),
+		Black: Player{Kind: "human", UserID: "u1"}, White: Player{Kind: "ai", UserID: "ai:katago"}})
+	if !g.AIAssist {
+		t.Error("AI help should be on against KataGo")
+	}
+	if g.Seat("ai:katago") != board.White {
+		t.Error("the AI seat should be recognized by its id")
+	}
+}
+
+func TestHugeTreesAreSentAsAWindow(t *testing.T) {
+	g, _ := New(Options{Mode: ModeJoseki, Size: 19, Rules: rules(t), Black: Player{Kind: "human"}, White: Player{Kind: "human"}})
+	// A wide tree of 4000 one-move branches under the root.
+	for i := 0; i < 4000; i++ {
+		n := g.Tree.AddChild(g.Tree.Root)
+		n.HasMove, n.Color, n.Move = true, board.Black, pt(i%19, (i/19)%19)
+	}
+	v := g.View("")
+	if !v.Partial {
+		t.Fatal("expected a partial view")
+	}
+	if len(v.Nodes) != 4001 {
+		// root plus its children are the window at the root
+		t.Errorf("window size %d", len(v.Nodes))
+	}
+	// Move the cursor to one child: the window must now include its path.
+	g.Cursor = g.Tree.Root.Children[5]
+	v = g.View("")
+	if len(v.Nodes) != 4001 {
+		t.Errorf("window after moving %d", len(v.Nodes))
+	}
+}

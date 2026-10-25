@@ -72,6 +72,9 @@ type GameView struct {
 
 	Nodes    []NodeView `json:"nodes"`
 	MainLine []int      `json:"mainLine"`
+	// Partial is true when Nodes is only a window of a very large tree;
+	// ids in a node's children that are missing from Nodes are not loaded yet.
+	Partial bool `json:"partial"`
 
 	Players [2]PlayerView `json:"players"` // [black, white]
 	Clock   [2]clock.View `json:"clock"`
@@ -139,7 +142,27 @@ func (g *Game) View(userID string) GameView {
 		}
 	}
 
+	// Small trees go out whole. A huge tree (the joseki dictionary has
+	// tens of thousands of nodes) is sent as a window: the path to the
+	// cursor, each path node's children, and the cursor's children.
+	total := 0
+	t.Walk(func(*tree.Node) bool { total++; return true })
+	windowed := total > maxFullNodes
+	show := map[int]bool{}
+	if windowed {
+		v.Partial = true
+		for _, p := range t.Path(g.Cursor) {
+			show[p.ID] = true
+			for _, c := range p.Children {
+				show[c.ID] = true
+			}
+		}
+	}
+
 	t.Walk(func(n *tree.Node) bool {
+		if windowed && !show[n.ID] {
+			return true
+		}
 		nv := NodeView{
 			ID: n.ID, Color: int(n.Color), Comment: n.Comment, Name: n.Name,
 			Judgment: n.Judgment, Children: []int{},
@@ -164,6 +187,9 @@ func (g *Game) View(userID string) GameView {
 		return true
 	})
 	for _, n := range t.MainLine() {
+		if windowed && len(v.MainLine) >= 200 {
+			break
+		}
 		v.MainLine = append(v.MainLine, n.ID)
 	}
 
@@ -191,3 +217,6 @@ func (g *Game) View(userID string) GameView {
 	v.You = you
 	return v
 }
+
+// maxFullNodes is the largest tree sent whole.
+const maxFullNodes = 3000

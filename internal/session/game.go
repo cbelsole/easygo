@@ -93,6 +93,10 @@ type Game struct {
 	Updated  time.Time
 	Handicap int
 	AIAssist bool
+	// AssistVotes records who has agreed to AI help; assistDefault is true
+	// for games where only one human is involved.
+	AssistVotes   [3]bool
+	assistDefault bool
 
 	// Scoring phase.
 	AutoDead  map[board.Point]bool // stones the AI judged dead
@@ -157,6 +161,10 @@ func New(o Options) (*Game, error) {
 		g.Local = true // teaching and joseki are driven by one person
 	}
 	g.Updated = g.Created
+	// Between two networked humans AI help is off until both agree; with a
+	// single human (hot-seat, teaching, KataGo opponent) it is on.
+	g.assistDefault = g.Local || o.Black.Kind == "ai" || o.White.Kind == "ai"
+	g.recomputeAssistLocked()
 	g.Clock = clock.New(o.Clock, nil)
 	if g.Status == StatusPlaying && o.Mode == ModeLive {
 		g.Clock.Start(g.toPlayLocked())
@@ -173,6 +181,7 @@ func FromTree(t *tree.Tree, mode Mode, owner string) *Game {
 		Handicap: t.Info.Handicap,
 	}
 	g.Updated = g.Created
+	g.assistDefault, g.AIAssist = true, true
 	g.Players[board.Black] = Player{Name: orDefault(t.Info.BlackName, "Black"), Rank: t.Info.BlackRank, Kind: "human"}
 	g.Players[board.White] = Player{Name: orDefault(t.Info.WhiteName, "White"), Rank: t.Info.WhiteRank, Kind: "human"}
 	g.Clock = clock.New(clock.Config{}, nil)
@@ -252,11 +261,35 @@ func (g *Game) seatLocked(userID string) board.Color {
 	}
 	for _, c := range []board.Color{board.Black, board.White} {
 		p := g.Players[c]
-		if p.Kind == "human" && p.UserID != "" && p.UserID == userID {
+		if (p.Kind == "human" || p.Kind == "ai") && p.UserID != "" && p.UserID == userID {
 			return c
 		}
 	}
 	return board.Empty
+}
+
+// SetAssist records a player's vote on AI assistance. In a game between two
+// networked humans it is on only when both have said yes; anywhere else a
+// single player's choice stands.
+func (g *Game) SetAssist(userID string, on bool) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	seat := g.seatLocked(userID)
+	if seat == board.Empty {
+		return ErrNotYours
+	}
+	g.AssistVotes[seat] = on
+	g.recomputeAssistLocked()
+	g.changedLocked()
+	return nil
+}
+
+func (g *Game) recomputeAssistLocked() {
+	if g.Local || g.Players[board.Black].Kind == "ai" || g.Players[board.White].Kind == "ai" {
+		g.AIAssist = g.AssistVotes[board.Black] || g.AssistVotes[board.White] || g.assistDefault
+		return
+	}
+	g.AIAssist = g.AssistVotes[board.Black] && g.AssistVotes[board.White]
 }
 
 // Seat is the exported form of seatLocked.
