@@ -20,7 +20,7 @@ Reading a game by id and watching its event stream do not.
 
 | Call | Notes |
 |---|---|
-| `GET /api/config` | `{presets:[{name,rules}], sizes:[9,13,19], katago:KataGoStatus, joseki:JosekiInfo, googleAuth:bool, devLogin:bool}` |
+| `GET /api/config` | `{presets:[{name,rules}], sizes:[9,13,19], ranks:["20k",...,"9d"], katago:KataGoStatus, joseki:JosekiInfo, googleAuth:bool, devLogin:bool}` |
 | `GET /api/me` | `{user: User \| null}`; `User = {id,name,email?,picture?,rank,location,provider}` |
 | `PUT /api/me` | `{name, rank, location}` -> `{user}` |
 | `POST /api/auth/dev-login` | `{name}` -> `User`. Only when `devLogin` is true |
@@ -42,11 +42,15 @@ Reading a game by id and watching its event stream do not.
   "opponent": "local | ai | open",
   "color": "black | white | random",
   "aiVisits": 200,
+  "aiRank": "16k",
   "clock": {"enabled": true, "mainSeconds": 600, "periods": 5, "periodSeconds": 30}
 }
 ```
 
 * `rules` is a preset name from `/api/config` or a full rules object (below). `komi` overrides it.
+* `aiRank` (`20k`..`1k`, `1d`..`9d`) makes the KataGo opponent play like a human of that rank, using KataGo's
+  human-style model; it wins over `aiVisits`. 409 if that model is not installed (`katago.humanAvailable` is false).
+  Without `aiRank` KataGo plays at full strength with `aiVisits` search visits.
 * `opponent` only applies to `live`. `local` = one person plays both sides (hot-seat),
   `ai` = KataGo (409 if it is not running), `open` = an empty seat someone else joins.
 * `teaching` and `joseki` games are driven by their owner: free navigation, branching, annotations.
@@ -136,8 +140,8 @@ Only reported on 13x13 and 19x19, and once a corner has 3 or more stones.
 
 | Call | Notes |
 |---|---|
-| `GET /api/katago` | `{available, starting, version?, error?, config:{binary,model,config}}` |
-| `PUT /api/katago` | `{binary, model, config}`: saves and restarts KataGo; 202 |
+| `GET /api/katago` | `{available, starting, version?, humanAvailable, error?, config:{binary,model,config,humanModel?}}` (paths only for administrators) |
+| `PUT /api/katago` | `{binary, model, config, humanModel?}`: saves and restarts KataGo; 202. `humanModel` is left unchanged if omitted |
 | `GET /api/joseki` | `{loaded, positions, source, error?}` |
 | `POST /api/joseki/fetch` | Downloads Kogo's Joseki Dictionary and rebuilds the index |
 

@@ -48,3 +48,13 @@ Easy Mode spec and these answers win over Joseki Dojo wherever they disagree.
   suggested. A group KataGo is certain about (mean ownership 0.9 or more) is strong; one it barely holds is weak.
   It is stable on a single position, where value swings need two.
 - **Large knight's move is the (2,3) offset.** The spec's "(1,3)" is not a standard named shape.
+- **Opponent strength is a go rank, backed by KataGo's human-imitation model.** `aiRank` (20k to 9d) loads the
+  `b18c384nbt-humanv0` network next to the normal one and asks it for the move a player of that rank would make.
+  Below dan the move is sampled straight from that policy, which is how KataGo's docs recommend playing like a human;
+  passing is decided by the full-strength engine. For dan ranks the raw policy plays weaker than the players it
+  imitates, so moves are weighted by `humanPrior * exp(utility / 0.5)` from a short search, which suppresses the
+  ones that lose a lot. "Full strength" with a visit count is still offered.
+- **The rank is a style, not a measured rating.** Tests show it is monotonic (higher ranks agree more with KataGo's
+  own best moves; a 5d beat a 20k by over 100 points), but it has not been calibrated against real players, so
+  "16k" means "plays like the 16k games the model was trained on", not a guaranteed 16k Elo. Adjust by a rank or two
+  if it feels off.

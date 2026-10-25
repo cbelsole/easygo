@@ -468,18 +468,41 @@ func (s *Server) aiMove(g *session.Game, color board.Color, visits int, version 
 	var q katago.Query
 	var size int
 	var qerr error
-	var aiID string
+	var aiID, rank string
+	var pos *board.Position
+	var rules board.Rules
 	g.Lock(func() {
 		q, qerr = katago.FromTree(g.Tree, g.Cursor)
 		size = g.Tree.Size
 		aiID = g.Players[color].UserID
+		rank = g.Players[color].AIRank
+		rules = g.Tree.Rules
+		pos, _ = g.Tree.Position(g.Cursor)
 	})
-	if qerr != nil {
+	if qerr != nil || pos == nil {
 		return false
 	}
-	q.MaxVisits = visits
 	ctx, cancel := context.WithTimeout(s.ctx, 60*time.Second)
 	defer cancel()
+
+	if rank != "" {
+		// A human-style opponent: sample the move a player of this rank would make.
+		p, err := kg.HumanMove(ctx, q, rank, func(p board.Point) bool { return pos.Legal(rules, color, p) }, nil)
+		if err != nil {
+			log.Printf("ai move (%s) %s: %v", rank, g.ID, err)
+			return false
+		}
+		if g.Version() != version {
+			return true
+		}
+		if _, err := g.Play(aiID, p, 0); err != nil {
+			log.Printf("ai move %s: %v", g.ID, err)
+			return false
+		}
+		return true
+	}
+
+	q.MaxVisits = visits
 	resp, err := kg.Analyze(ctx, q)
 	if err != nil {
 		log.Printf("ai move %s: %v", g.ID, err)

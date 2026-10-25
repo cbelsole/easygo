@@ -10,6 +10,7 @@ import type {
   Rules,
 } from "../api/types";
 import { useToast } from "../hooks/useToast";
+import { loadRank, saveRank, spellRank } from "../lib/ranks";
 
 interface Props {
   config: AppConfig;
@@ -50,6 +51,14 @@ export function NewGameForm({ config, onCreated }: Props) {
   const [opponent, setOpponent] = useState<Opponent>("local");
   const [color, setColor] = useState<ColorChoice>("black");
   const [visits, setVisits] = useState(200);
+  const human = config.katago.humanAvailable && config.ranks.length > 0;
+  const [style, setStyle] = useState<"rank" | "visits">(human ? "rank" : "visits");
+  const [rank, setRank] = useState(() => loadRank(config.ranks));
+  const humanStyle = human && style === "rank";
+  const chooseRank = (r: string) => {
+    setRank(r);
+    saveRank(r);
+  };
   const [useClock, setUseClock] = useState(false);
   const [mainMinutes, setMainMinutes] = useState(10);
   const [periods, setPeriods] = useState(5);
@@ -79,6 +88,7 @@ export function NewGameForm({ config, onCreated }: Props) {
       opponent: live ? opponent : "local",
       color: live && opponent !== "local" ? color : "black",
       aiVisits: visits,
+      ...(opponent === "ai" && humanStyle ? { aiRank: rank } : {}),
       clock: {
         enabled: useClock && mode !== "joseki",
         mainSeconds: Math.max(0, Math.round(mainMinutes * 60)),
@@ -295,16 +305,66 @@ export function NewGameForm({ config, onCreated }: Props) {
             </label>
           )}
           {opponent === "ai" && (
-            <label className="field">
-              <span>KataGo strength</span>
-              <select value={visits} onChange={(e) => setVisits(Number(e.target.value))}>
-                {STRENGTHS.map((s) => (
-                  <option key={s.visits} value={s.visits}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="field">
+              <span>KataGo plays</span>
+              <div className="segmented" role="radiogroup" aria-label="KataGo strength style">
+                <label
+                  className={humanStyle ? "seg-on" : ""}
+                  title={human ? undefined : "The human-style model is not installed"}
+                >
+                  <input
+                    type="radio"
+                    name="strength-style"
+                    disabled={!human}
+                    checked={humanStyle}
+                    onChange={() => setStyle("rank")}
+                  />
+                  Like a human of rank
+                </label>
+                <label className={!humanStyle ? "seg-on" : ""}>
+                  <input
+                    type="radio"
+                    name="strength-style"
+                    checked={!humanStyle}
+                    onChange={() => setStyle("visits")}
+                  />
+                  At full strength
+                </label>
+              </div>
+              {humanStyle ? (
+                <label className="field">
+                  <span>Opponent rank</span>
+                  <select value={rank} onChange={(e) => chooseRank(e.target.value)}>
+                    {config.ranks.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                  <small className="muted">
+                    It makes the kinds of moves, and mistakes, of a {spellRank(rank)} player. Set it
+                    near your own rank for an even game.
+                  </small>
+                </label>
+              ) : (
+                <label className="field">
+                  <span>Search effort</span>
+                  <select value={visits} onChange={(e) => setVisits(Number(e.target.value))}>
+                    {STRENGTHS.map((s) => (
+                      <option key={s.visits} value={s.visits}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {!human && (
+                <p className="muted">
+                  Rank-based opponents need KataGo's human-style model. Run{" "}
+                  <code>scripts\setup-katago.ps1</code> to install it, then restart.
+                </p>
+              )}
+            </div>
           )}
         </fieldset>
       )}

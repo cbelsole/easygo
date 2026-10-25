@@ -25,9 +25,13 @@ type Config struct {
 	Binary string `json:"binary"`
 	Model  string `json:"model"`
 	Config string `json:"config"`
+	// HumanModel is optional. With it, KataGo can imitate a human of a given
+	// rank (see HumanMove); without it only full-strength play is available.
+	HumanModel string `json:"humanModel,omitempty"`
 }
 
-// Valid reports whether the three files exist.
+// Valid reports whether the required files exist. The human model is
+// optional, but if one is named it must exist.
 func (c Config) Valid() error {
 	for name, p := range map[string]string{"binary": c.Binary, "model": c.Model, "config": c.Config} {
 		if p == "" {
@@ -35,6 +39,11 @@ func (c Config) Valid() error {
 		}
 		if _, err := os.Stat(p); err != nil {
 			return fmt.Errorf("katago %s: %w", name, err)
+		}
+	}
+	if c.HumanModel != "" {
+		if _, err := os.Stat(c.HumanModel); err != nil {
+			return fmt.Errorf("katago human model: %w", err)
 		}
 	}
 	return nil
@@ -56,6 +65,8 @@ type Client struct {
 	nextID  atomic.Uint64
 	stderr  *ring
 	Version string
+	// HasHuman reports whether the human-imitation model was loaded.
+	HasHuman bool
 }
 
 // Start launches KataGo and waits until it answers a version query.
@@ -63,7 +74,11 @@ func Start(ctx context.Context, cfg Config) (*Client, error) {
 	if err := cfg.Valid(); err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(cfg.Binary, "analysis", "-config", cfg.Config, "-model", cfg.Model)
+	args := []string{"analysis", "-config", cfg.Config, "-model", cfg.Model}
+	if cfg.HumanModel != "" {
+		args = append(args, "-human-model", cfg.HumanModel)
+	}
+	cmd := exec.Command(cfg.Binary, args...)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -76,7 +91,7 @@ func Start(ctx context.Context, cfg Config) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &Client{cfg: cfg, cmd: cmd, stdin: stdin, wait: map[string]chan *Response{}, done: make(chan struct{}), stderr: newRing(40)}
+	c := &Client{cfg: cfg, HasHuman: cfg.HumanModel != "", cmd: cmd, stdin: stdin, wait: map[string]chan *Response{}, done: make(chan struct{}), stderr: newRing(40)}
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start katago: %w", err)
 	}

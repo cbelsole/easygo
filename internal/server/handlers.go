@@ -16,6 +16,7 @@ import (
 	"easygo/internal/board"
 	"easygo/internal/clock"
 	"easygo/internal/joseki"
+	"easygo/internal/katago"
 	"easygo/internal/session"
 	"easygo/internal/sgf"
 	"easygo/internal/store"
@@ -110,6 +111,7 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{
 		"presets":    presets,
 		"sizes":      []int{9, 13, 19},
+		"ranks":      katago.Ranks(),
 		"katago":     s.katagoStatus(s.isAdmin(r)),
 		"joseki":     ji,
 		"googleAuth": s.auth.GoogleEnabled(),
@@ -159,7 +161,8 @@ type createReq struct {
 	Handicap int             `json:"handicap"`
 	Opponent string          `json:"opponent"` // local | ai | open
 	Color    string          `json:"color"`    // black | white | random
-	AIVisits int             `json:"aiVisits"`
+	AIVisits int             `json:"aiVisits"` // full-strength opponent: search visits
+	AIRank   string          `json:"aiRank"`   // human-style opponent, e.g. "16k"; wins over aiVisits
 	Clock    clock.Config    `json:"clock"`
 }
 
@@ -224,9 +227,23 @@ func (s *Server) handleCreate(w http.ResponseWriter, r *http.Request) {
 			other = session.Player{Name: "Player 2", Kind: "human"}
 			me.UserID = ""
 		case "ai":
-			if s.katago() == nil {
+			kg := s.katago()
+			if kg == nil {
 				writeJSON(w, 409, apiError{"KataGo is not running, so there is no computer opponent right now"})
 				return
+			}
+			if req.AIRank != "" {
+				// Play like a human of this rank, e.g. "16k".
+				if !katago.ValidRank(req.AIRank) {
+					writeJSON(w, 400, apiError{"rank must be 20k to 1k or 1d to 9d"})
+					return
+				}
+				if !kg.HasHuman {
+					writeJSON(w, 409, apiError{"rank-based opponents need KataGo's human-style model; it is not installed (run scripts/setup-katago.ps1)"})
+					return
+				}
+				other = session.Player{Name: "KataGo", Rank: req.AIRank, Kind: "ai", UserID: "ai:katago", AIRank: req.AIRank}
+				break
 			}
 			visits := req.AIVisits
 			if visits <= 0 || visits > 5000 {
@@ -664,12 +681,18 @@ func (s *Server) handleKataGoConfig(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.admin(w, r); !ok {
 		return
 	}
-	var c struct{ Binary, Model, Config string }
+	var c struct {
+		Binary, Model, Config string
+		HumanModel            *string // nil leaves it unchanged
+	}
 	if !readJSON(w, r, &c) {
 		return
 	}
 	s.kgMu.Lock()
 	s.cfg.KataGo.Binary, s.cfg.KataGo.Model, s.cfg.KataGo.Config = c.Binary, c.Model, c.Config
+	if c.HumanModel != nil {
+		s.cfg.KataGo.HumanModel = *c.HumanModel
+	}
 	s.kgErr = ""
 	s.kgMu.Unlock()
 	if err := s.saveSettings(); err != nil {

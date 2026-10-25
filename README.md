@@ -19,7 +19,7 @@ See `docs/spec.md` for the product spec, `docs/decisions.md` for the choices mad
 | Ladders (with breakers), nets, snapbacks, knight / large knight | `internal/shapes` | no |
 | Live joseki recognition across all 8 symmetries and both colors | `internal/joseki`, position-hash lookup in Kogo's dictionary | no |
 | Next-move suggestions, contested territory, life and death, strong / weak groups | `internal/katago` | yes |
-| Computer opponent | KataGo, strength set by visit count | yes |
+| Computer opponent | KataGo, strength set as a go rank (20k to 9d, imitating a human of that rank) or as full-strength search | yes; rank play also needs the human-style model |
 | Accounts, networked games | Google sign-in, server-sent events | no |
 
 Features that need KataGo are disabled when it is not running.
@@ -31,7 +31,7 @@ Prerequisites: Go, [pnpm](https://pnpm.io) 12 (`volta install pnpm` or `npm i -g
 without touching your global Node. Without Volta, install a recent Node yourself.
 
 ```powershell
-# 1. KataGo (engine + newest network), installed outside the repo
+# 1. KataGo (engine, newest network, and the human-style model for rank opponents), installed outside the repo
 powershell -ExecutionPolicy Bypass -File scripts\setup-katago.ps1
 
 # 2. Joseki dictionary (downloaded for your own use, see "Joseki data" below)
@@ -70,7 +70,7 @@ Flags, with environment variables as defaults:
 | `-web` | `EASYGO_WEB` | `web/dist` |
 | `-base-url` | `EASYGO_BASE_URL` | derived from `-addr`; set to the public URL when deployed |
 | `-katago-dir` | `EASYGO_KATAGO_DIR` | `%USERPROFILE%\katago` |
-| | `EASYGO_KATAGO_BIN`, `_MODEL`, `_CONFIG` | override the three KataGo paths individually |
+| | `EASYGO_KATAGO_BIN`, `_MODEL`, `_CONFIG`, `_HUMAN_MODEL` | override the KataGo paths individually (the human model is found in the `human` folder of the KataGo directory otherwise) |
 | | `EASYGO_SECRET` | hex key that signs session cookies; generated into `data/secret.key` otherwise |
 | | `EASYGO_ADMINS` | comma-separated emails allowed to change KataGo paths and download data |
 | | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | enables Google sign-in |
@@ -125,4 +125,5 @@ when none is installed. Set `EASYGO_KATAGO_DIR` if it is not in `%USERPROFILE%\k
   are not read out.
 * Large knight's move is the (2,3) offset. The spec's "(1,3)" is not a standard named shape and is not detected.
 * Joseki recognition covers 13x13 and 19x19 and needs 3 stones in a corner window.
+* The rank setting is a playing style learned from human games, not a calibrated rating. It is monotonic (verified by tests that play stronger ranks against weaker ones) but "16k" may feel a rank or two off.
 * KataGo setup uses the OpenCL build. CUDA/TensorRT are faster on NVIDIA cards but need a system-wide CUDA install.

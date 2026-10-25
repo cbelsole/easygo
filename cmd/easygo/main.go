@@ -113,6 +113,9 @@ func run(args []string) error {
 	if v := os.Getenv("EASYGO_KATAGO_MODEL"); v != "" {
 		kcfg.Model = v
 	}
+	if v := os.Getenv("EASYGO_KATAGO_HUMAN_MODEL"); v != "" {
+		kcfg.HumanModel = v
+	}
 	if v := os.Getenv("EASYGO_KATAGO_CONFIG"); v != "" {
 		kcfg.Config = v
 	}
@@ -163,6 +166,9 @@ func katagoConfig(dir string) katago.Config {
 	cfg := katago.Config{
 		Binary: filepath.Join(dir, "bin", exe),
 		Config: filepath.Join(dir, "analysis.cfg"),
+	}
+	if hm, _ := filepath.Glob(filepath.Join(dir, "human", "*.bin.gz")); len(hm) > 0 {
+		cfg.HumanModel = hm[0]
 	}
 	if nets, _ := filepath.Glob(filepath.Join(dir, "nets", "*.bin.gz")); len(nets) > 0 {
 		cfg.Model = nets[0]

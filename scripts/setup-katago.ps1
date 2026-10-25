@@ -10,6 +10,7 @@
     bin\katago.exe        the engine and its DLLs
     analysis.cfg          copy of the example analysis config
     nets\<network>.bin.gz
+    human\b18c384nbt-humanv0.bin.gz   rank-based opponents (use -SkipHuman to omit)
 
   The OpenCL build runs on the GPU driver alone. CUDA and TensorRT builds are
   faster on NVIDIA cards but need a system-wide CUDA/cuDNN install first.
@@ -20,7 +21,8 @@
 param(
   [string]$Dir = (Join-Path $env:USERPROFILE "katago"),
   [string]$Backend = "opencl",
-  [switch]$SkipNet
+  [switch]$SkipNet,
+  [switch]$SkipHuman
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -76,6 +78,29 @@ if (-not $SkipNet) {
     throw "Checksum mismatch for $($net.name): got $hash, expected $($net.model_file_sha256)."
   }
   Write-Host "Checksum OK."
+}
+
+
+# --- human-style model --------------------------------------------------
+# Lets KataGo imitate a human of a chosen rank (20k to 9d). KataGo publishes it
+# on its v1.15.0 release but no checksum, so the size is checked against the
+# release listing and the SHA-256 is printed for your records.
+if (-not $SkipHuman) {
+  $rel = Invoke-RestMethod "https://api.github.com/repos/lightvector/KataGo/releases/tags/v1.15.0" -Headers $headers
+  $h = $rel.assets | Where-Object { $_.name -eq "b18c384nbt-humanv0.bin.gz" } | Select-Object -First 1
+  if (-not $h) { throw "The human model was not found on KataGo's v1.15.0 release." }
+  $humanDir = Join-Path $Dir "human"
+  New-Item -ItemType Directory -Force -Path $humanDir | Out-Null
+  $humanFile = Join-Path $humanDir $h.name
+  if (-not (Test-Path $humanFile) -or (Get-Item $humanFile).Length -ne $h.size) {
+    Write-Host "Human-style model $($h.name) ($([math]::Round($h.size / 1MB)) MB)"
+    Invoke-WebRequest $h.browser_download_url -OutFile $humanFile -Headers $headers
+  }
+  if ((Get-Item $humanFile).Length -ne $h.size) {
+    Remove-Item $humanFile
+    throw "Human model download is the wrong size (expected $($h.size) bytes)."
+  }
+  Write-Host "Human model OK. SHA-256 $((Get-FileHash $humanFile -Algorithm SHA256).Hash.ToLower())"
 }
 
 Write-Host ""

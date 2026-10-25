@@ -300,11 +300,13 @@ func (s *Server) katago() *katago.Client {
 }
 
 type katagoStatus struct {
-	Available bool          `json:"available"`
-	Starting  bool          `json:"starting"`
-	Version   string        `json:"version,omitempty"`
-	Error     string        `json:"error,omitempty"`
-	Config    katago.Config `json:"config"`
+	Available bool   `json:"available"`
+	Starting  bool   `json:"starting"`
+	Version   string `json:"version,omitempty"`
+	// HumanAvailable is true when rank-based opponents can be played.
+	HumanAvailable bool          `json:"humanAvailable"`
+	Error          string        `json:"error,omitempty"`
+	Config         katago.Config `json:"config"`
 }
 
 func (s *Server) katagoStatus(withPaths bool) katagoStatus {
@@ -315,7 +317,7 @@ func (s *Server) katagoStatus(withPaths bool) katagoStatus {
 		st.Config = s.cfg.KataGo
 	}
 	if s.kg != nil && s.kg.Running() {
-		st.Available, st.Version = true, s.kg.Version
+		st.Available, st.Version, st.HumanAvailable = true, s.kg.Version, s.kg.HasHuman
 	}
 	return st
 }

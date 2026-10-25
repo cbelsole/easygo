@@ -6,6 +6,7 @@
     "dev": "vp dev",
     "build": "vp build",
     "check": "vp check",
+    "typecheck": "tsc --noEmit -p .",
     "test": "vp test"
   },
   "dependencies": {

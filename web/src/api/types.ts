@@ -36,12 +36,15 @@ export interface KataGoConfig {
   binary: string;
   model: string;
   config: string;
+  humanModel?: string;
 }
 
 export interface KataGoStatus {
   available: boolean;
   starting: boolean;
   version?: string;
+  /** True when rank-based (human-style) opponents can be played. */
+  humanAvailable: boolean;
   error?: string;
   config: KataGoConfig;
 }
@@ -56,6 +59,8 @@ export interface JosekiInfo {
 export interface AppConfig {
   presets: { name: string; rules: Rules }[];
   sizes: number[];
+  /** Ranks the human-style opponent can imitate, weakest first (20k ... 9d). */
+  ranks: string[];
   katago: KataGoStatus;
   joseki: JosekiInfo;
   googleAuth: boolean;
@@ -183,7 +188,10 @@ export interface NewGameRequest {
   handicap: number;
   opponent: Opponent;
   color: ColorChoice;
+  /** Full-strength opponent: search visits. Ignored when aiRank is set. */
   aiVisits: number;
+  /** Human-style opponent, e.g. "16k". */
+  aiRank?: string;
   clock: ClockConfig;
 }
 

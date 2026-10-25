@@ -20,6 +20,12 @@ type Query struct {
 	MaxVisits     int
 	Ownership     bool
 	Policy        bool
+	// HumanProfile, e.g. "rank_16k", makes KataGo report what a human of that
+	// rank would play (needs the human model). HumanExplore is the share of
+	// the search spent examining those human moves, which lets their values
+	// be judged without biasing the evaluation of the position.
+	HumanProfile string
+	HumanExplore float64
 	// ReportEvery asks for partial results every n seconds (0 = off).
 	ReportEvery float64
 }
@@ -50,6 +56,13 @@ func (q Query) toMap() map[string]any {
 	}
 	if q.Policy {
 		m["includePolicy"] = true
+	}
+	if q.HumanProfile != "" {
+		os := map[string]any{"humanSLProfile": q.HumanProfile, "ignorePreRootHistory": false, "rootNumSymmetriesToSample": 2}
+		if q.HumanExplore > 0 {
+			os["humanSLRootExploreProbWeightless"] = q.HumanExplore
+		}
+		m["overrideSettings"] = os
 	}
 	if q.ReportEvery > 0 {
 		m["reportDuringSearchEvery"] = q.ReportEvery
@@ -115,18 +128,23 @@ type Response struct {
 	RootInfo       RootInfo   `json:"rootInfo"`
 	Ownership      []float64  `json:"ownership"`
 	Policy         []float64  `json:"policy"`
-	Error          string     `json:"error"`
-	Version        string     `json:"version"`
+	// HumanPolicy is the human-imitation policy: size*size points then pass,
+	// -1 for illegal moves. Present when the query asked for a human profile.
+	HumanPolicy []float64 `json:"humanPolicy"`
+	Error       string    `json:"error"`
+	Version     string    `json:"version"`
 }
 
 type MoveInfo struct {
-	Move      string   `json:"move"`
-	Order     int      `json:"order"`
-	Visits    int      `json:"visits"`
-	Winrate   float64  `json:"winrate"`
-	ScoreLead float64  `json:"scoreLead"`
-	Prior     float64  `json:"prior"`
-	PV        []string `json:"pv"`
+	Move       string   `json:"move"`
+	Order      int      `json:"order"`
+	Visits     int      `json:"visits"`
+	Winrate    float64  `json:"winrate"`
+	ScoreLead  float64  `json:"scoreLead"`
+	Prior      float64  `json:"prior"`
+	HumanPrior float64  `json:"humanPrior"`
+	Utility    float64  `json:"utility"`
+	PV         []string `json:"pv"`
 }
 
 type RootInfo struct {

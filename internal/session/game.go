@@ -53,6 +53,9 @@ type Player struct {
 	UserID   string `json:"-"`
 	// AILevel is the visit budget a KataGo opponent searches with.
 	AIVisits int `json:"-"`
+	// AIRank, e.g. "16k", makes a KataGo opponent imitate a human of that rank.
+	// Empty means full strength with AIVisits visits.
+	AIRank string `json:"-"`
 }
 
 // Options configures a new game.

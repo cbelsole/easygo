@@ -369,6 +369,9 @@ func realKataGo(t *testing.T) katago.Config {
 	if nets, _ := filepath.Glob(filepath.Join(dir, "nets", "*.bin.gz")); len(nets) > 0 {
 		cfg.Model = nets[0]
 	}
+	if hm, _ := filepath.Glob(filepath.Join(dir, "human", "*.bin.gz")); len(hm) > 0 {
+		cfg.HumanModel = hm[0]
+	}
 	if cfg.Valid() != nil {
 		t.Skip("no KataGo available")
 	}
@@ -679,5 +682,80 @@ func TestViewAtNodeAndListSize(t *testing.T) {
 	ann.do("GET", "/api/games", nil, &lists)
 	if len(lists.Mine) != 1 || lists.Mine[0].Size != 13 {
 		t.Errorf("list size: %+v", lists.Mine)
+	}
+}
+
+func TestRankedOpponentNeedsAValidRankAndTheHumanModel(t *testing.T) {
+	cfg := realKataGo(t)
+	noHuman := cfg
+	noHuman.HumanModel = ""
+	e := newEnv(t, noHuman)
+	e.waitKataGo()
+	ann := e.login("Ann")
+	for _, bad := range []string{"21k", "10d", "k16", "16", "rank_16k", "16k; rm -rf"} {
+		if code, _ := ann.do("POST", "/api/games", map[string]any{"size": 9, "opponent": "ai", "aiRank": bad}, nil); code != 400 {
+			t.Errorf("rank %q: %d, want 400", bad, code)
+		}
+	}
+	// A valid rank, but KataGo was started without the human model.
+	code, body := ann.do("POST", "/api/games", map[string]any{"size": 9, "opponent": "ai", "aiRank": "16k"}, nil)
+	if code != 409 || !strings.Contains(body, "human-style model") {
+		t.Errorf("without the model: %d %s", code, body)
+	}
+	var cfgOut struct{ Katago struct{ HumanAvailable bool } }
+	ann.do("GET", "/api/config", nil, &cfgOut)
+	if cfgOut.Katago.HumanAvailable {
+		t.Error("config should report the human model as unavailable")
+	}
+}
+
+func TestPlayAgainstA16kKataGo(t *testing.T) {
+	cfg := realKataGo(t)
+	if cfg.HumanModel == "" {
+		t.Skip("no human-style model installed")
+	}
+	e := newEnv(t, cfg)
+	e.waitKataGo()
+	ann := e.login("Ann")
+	var out struct {
+		Ranks  []string
+		Katago struct{ HumanAvailable bool }
+	}
+	ann.do("GET", "/api/config", nil, &out)
+	if !out.Katago.HumanAvailable || len(out.Ranks) != 29 || out.Ranks[0] != "20k" || out.Ranks[28] != "9d" {
+		t.Fatalf("config: %+v", out)
+	}
+
+	v := ann.create(map[string]any{"size": 19, "opponent": "ai", "aiRank": "16k", "color": "black"})
+	if v.Players[1].Kind != "ai" || v.Players[1].Rank != "16k" {
+		t.Fatalf("the opponent's card should read 16k: %+v", v.Players[1])
+	}
+	// Black plays star points; the 16k may have taken one itself, so always
+	// pick a point that is still empty.
+	stars := [][2]int{{15, 3}, {3, 15}, {15, 15}, {3, 3}}
+	cur := v
+	for i := 0; i < 2; i++ {
+		want := 2 * (i + 1)
+		var mv [2]int
+		for _, s := range stars {
+			if cur.Board[s[1]*19+s[0]] == 0 {
+				mv = s
+				break
+			}
+		}
+		if code, _ := ann.move(v.ID, mv[0], mv[1]); code != 200 {
+			t.Fatalf("move %d at %v: %d", i, mv, code)
+		}
+		cur = ann.waitView(v.ID, "the 16k reply", func(g session.GameView) bool { return g.MoveNumber >= want })
+	}
+	// The rank survives a save and reload.
+	g, err := e.srv.store.LoadGame(v.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rank string
+	g.Lock(func() { rank = g.Players[2].AIRank })
+	if rank != "16k" {
+		t.Errorf("stored rank %q", rank)
 	}
 }

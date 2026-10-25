@@ -16,6 +16,7 @@ type PlayerMeta struct {
 	Kind     string `json:"kind"`
 	UserID   string `json:"userId"`
 	AIVisits int    `json:"aiVisits"`
+	AIRank   string `json:"aiRank,omitempty"`
 }
 
 // Meta is everything about a game that the SGF record does not carry.
@@ -65,7 +66,7 @@ func (g *Game) Snapshot() (Meta, string) {
 	}
 	for i, c := range []board.Color{board.Black, board.White} {
 		p := g.Players[c]
-		m.Players[i] = PlayerMeta{p.Name, p.Rank, p.Location, p.Kind, p.UserID, p.AIVisits}
+		m.Players[i] = PlayerMeta{p.Name, p.Rank, p.Location, p.Kind, p.UserID, p.AIVisits, p.AIRank}
 	}
 	// The cursor as a path survives re-parsing, where node IDs would not.
 	var rev []int
@@ -103,7 +104,7 @@ func Restore(m Meta, record string) (*Game, error) {
 	}
 	for i, c := range []board.Color{board.Black, board.White} {
 		p := m.Players[i]
-		g.Players[c] = Player{Name: p.Name, Rank: p.Rank, Location: p.Location, Kind: p.Kind, UserID: p.UserID, AIVisits: p.AIVisits}
+		g.Players[c] = Player{Name: p.Name, Rank: p.Rank, Location: p.Location, Kind: p.Kind, UserID: p.UserID, AIVisits: p.AIVisits, AIRank: p.AIRank}
 	}
 	for _, i := range m.Cursor {
 		if i >= 0 && i < len(g.Cursor.Children) {
