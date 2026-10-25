@@ -3,9 +3,11 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"math/rand"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -60,25 +62,31 @@ func (s *Server) routes() {
 	m.HandleFunc("POST /api/joseki/fetch", s.handleJosekiFetch)
 	m.HandleFunc("POST /api/joseki/example", s.handleJosekiExample)
 
-	if s.cfg.WebDir != "" {
-		m.Handle("/", s.spa(s.cfg.WebDir))
+	if s.cfg.Web != nil {
+		m.Handle("/", s.spa(s.cfg.Web))
 	}
 }
 
 // spa serves the built frontend, falling back to index.html for client routes.
-func (s *Server) spa(dir string) http.Handler {
-	fs := http.FileServer(http.Dir(dir))
+func (s *Server) spa(fsys fs.FS) http.Handler {
+	files := http.FileServerFS(fsys)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		p := filepath.Join(dir, filepath.FromSlash(strings.TrimPrefix(filepath.Clean("/"+r.URL.Path), "/")))
-		if st, err := os.Stat(p); err != nil || st.IsDir() && r.URL.Path != "/" {
+		name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+		if name == "" {
+			name = "."
+		}
+		if st, err := fs.Stat(fsys, name); err != nil || (st.IsDir() && name != ".") {
 			if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/auth/") {
 				http.NotFound(w, r)
 				return
 			}
-			http.ServeFile(w, r, filepath.Join(dir, "index.html"))
+			// A client-side route: hand the app its entry page.
+			r2 := r.Clone(r.Context())
+			r2.URL.Path = "/"
+			files.ServeHTTP(w, r2)
 			return
 		}
-		fs.ServeHTTP(w, r)
+		files.ServeHTTP(w, r)
 	})
 }
 

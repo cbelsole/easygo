@@ -113,3 +113,16 @@ export function replay(size: number, handicap: number, moves: TreeNode[]): Posit
   }
   return { board, liberties: libertyMap(board, size), captures, lastMove, toPlay, moveNumber };
 }
+
+/** Sum of liberties over distinct groups of one color (shared liberties count once per group). */
+export function totalLiberties(board: Color[], size: number, color: 1 | 2): number {
+  const done = new Set<number>();
+  let total = 0;
+  board.forEach((c, i) => {
+    if (c !== color || done.has(i)) return;
+    const { stones, libs } = groupAt(board, size, i);
+    stones.forEach((s) => done.add(s));
+    total += libs.size;
+  });
+  return total;
+}

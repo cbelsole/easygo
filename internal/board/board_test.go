@@ -222,3 +222,22 @@ func TestPresetsValidate(t *testing.T) {
 		}
 	}
 }
+
+// Every repetition rule must stop the immediate recapture in a plain ko and
+// allow it once the board has changed.
+func TestAllKoRulesStopImmediateRecapture(t *testing.T) {
+	for _, ko := range []KoRule{KoSimple, KoPositional, KoSituational} {
+		r := rules(t, "japanese")
+		r.Ko = ko
+		p := koPosition()
+		p = mustPlay(t, p, r, Black, 2, 1)
+		if _, err := p.Play(r, White, Point{1, 1}); err != ErrKo {
+			t.Errorf("%s: immediate recapture: %v", ko, err)
+		}
+		p = mustPlay(t, p, r, White, 4, 4) // ko threat
+		p = mustPlay(t, p, r, Black, 4, 3) // answered
+		if _, err := p.Play(r, White, Point{1, 1}); err != nil {
+			t.Errorf("%s: recapture after a threat exchange: %v", ko, err)
+		}
+	}
+}

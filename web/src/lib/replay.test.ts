@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Color, TreeNode } from "../api/types";
-import { handicapPoints, libertyMap, replay } from "./replay";
+import { handicapPoints, libertyMap, replay, totalLiberties } from "./replay";
 
 const mv = (id: number, color: 1 | 2, x: number, y: number): TreeNode => ({
   id,
@@ -53,5 +53,16 @@ describe("handicapPoints", () => {
     expect(handicapPoints(19, 5)).toContainEqual({ x: 9, y: 9 });
     expect(handicapPoints(19, 9)).toHaveLength(9);
     expect(handicapPoints(19, 0)).toHaveLength(0);
+  });
+});
+
+describe("totalLiberties", () => {
+  it("counts each group once", () => {
+    const board = new Array<Color>(81).fill(0);
+    board[0] = 1;
+    board[1] = 1;
+    board[80] = 1;
+    expect(totalLiberties(board, 9, 1)).toBe(3 + 2);
+    expect(totalLiberties(board, 9, 2)).toBe(0);
   });
 });

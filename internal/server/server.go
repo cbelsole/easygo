@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -25,8 +26,8 @@ import (
 // Config holds everything the server needs from the outside.
 type Config struct {
 	DataDir string
-	// WebDir is the built frontend (Vite output). Empty serves the API only.
-	WebDir string
+	// Web is the built frontend (Vite output). Nil serves the API only.
+	Web    fs.FS
 	Auth   auth.Config
 	KataGo katago.Config
 }

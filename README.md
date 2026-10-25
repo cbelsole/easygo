@@ -50,6 +50,12 @@ go run ./cmd/easygo
 Open http://127.0.0.1:8080 and sign in with a name (dev login is enabled automatically when the server
 listens on localhost and Google is not configured).
 
+To produce one self-contained executable that serves its own frontend (after `npm run build`):
+
+```powershell
+go build -tags embedweb -o bin\easygo.exe .\cmd\easygo
+```
+
 For frontend development run the Go server as above and `npm run dev` inside `web/`
 (Vite+ on port 5173, proxying `/api` and `/auth` to the Go server).
 

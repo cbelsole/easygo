@@ -10,6 +10,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 	"easygo/internal/joseki"
 	"easygo/internal/katago"
 	"easygo/internal/server"
+	webui "easygo/web"
 )
 
 func main() {
@@ -63,7 +65,7 @@ func run(args []string) error {
 	fs := flag.NewFlagSet("easygo", flag.ExitOnError)
 	addr := fs.String("addr", env("EASYGO_ADDR", "127.0.0.1:8080"), "listen address")
 	data := fs.String("data", env("EASYGO_DATA", "data"), "data directory")
-	web := fs.String("web", env("EASYGO_WEB", "web/dist"), "built frontend directory ('' for API only)")
+	web := fs.String("web", env("EASYGO_WEB", "web/dist"), "built frontend directory; if missing, the frontend embedded with -tags embedweb is used")
 	baseURL := fs.String("base-url", env("EASYGO_BASE_URL", ""), "public URL, used for Google sign-in redirects")
 	kdir := fs.String("katago-dir", env("EASYGO_KATAGO_DIR", defaultKataGoDir()), "folder holding bin/katago.exe, analysis.cfg and nets/")
 	noKG := fs.Bool("no-katago", false, "do not start KataGo")
@@ -116,7 +118,7 @@ func run(args []string) error {
 	}
 
 	srv, err := server.New(server.Config{
-		DataDir: *data, WebDir: *web, KataGo: kcfg,
+		DataDir: *data, Web: frontend(*web), KataGo: kcfg,
 		Auth: auth.Config{Secret: secret, BaseURL: *baseURL, GoogleID: googleID, GoogleSecret: googleSecret, DevLogin: dev, Admins: admins},
 	})
 	if err != nil {
@@ -188,4 +190,16 @@ func loadSecret(path string) ([]byte, error) {
 		return nil, err
 	}
 	return b, nil
+}
+
+// frontend picks what to serve: a built web/dist on disk (so development
+// rebuilds show up without recompiling Go), else the embedded copy, else
+// nothing (API only).
+func frontend(dir string) fs.FS {
+	if dir != "" {
+		if st, err := os.Stat(dir); err == nil && st.IsDir() {
+			return os.DirFS(dir)
+		}
+	}
+	return webui.Dist()
 }

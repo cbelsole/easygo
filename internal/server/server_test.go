@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"easygo/internal/auth"
@@ -587,5 +588,43 @@ func TestJosekiExampleOpensAndReplacesItself(t *testing.T) {
 	}
 	if code, _ := ann.do("GET", "/api/games/"+second.ID, nil, nil); code != 200 {
 		t.Errorf("the latest example game should be kept: %d", code)
+	}
+}
+
+func TestServesFrontendWithClientRoutes(t *testing.T) {
+	web := fstest.MapFS{
+		"index.html":         {Data: []byte("<html>APP</html>")},
+		"assets/app-1.js":    {Data: []byte("console.log(1)")},
+		"assets/empty/.keep": {Data: []byte("")},
+	}
+	srv, err := New(Config{DataDir: t.TempDir(), Web: web, Auth: auth.Config{Secret: auth.NewSecret()}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(srv.Handler())
+	defer func() { ts.Close(); srv.Close() }()
+
+	get := func(path string) (int, string) {
+		resp, err := http.Get(ts.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, string(b)
+	}
+	for _, p := range []string{"/", "/game/abc123", "/lobby", "/assets/empty"} {
+		if code, body := get(p); code != 200 || !strings.Contains(body, "APP") {
+			t.Errorf("%s -> %d %q (client routes get the app)", p, code, body)
+		}
+	}
+	if code, body := get("/assets/app-1.js"); code != 200 || !strings.Contains(body, "console.log") {
+		t.Errorf("asset -> %d %q", code, body)
+	}
+	if code, body := get("/api/nope"); code != 404 || strings.Contains(body, "APP") {
+		t.Errorf("unknown API path must 404, not serve the app: %d %q", code, body)
+	}
+	if code, _ := get("/api/health"); code != 200 {
+		t.Errorf("health: %d", code)
 	}
 }
