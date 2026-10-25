@@ -6,10 +6,10 @@ import (
 )
 
 var (
-	ErrOccupied = errors.New("point is occupied")
-	ErrOffBoard = errors.New("point is off the board")
-	ErrSuicide  = errors.New("suicide is not allowed")
-	ErrKo       = errors.New("move repeats an earlier position (ko)")
+	ErrOccupied  = errors.New("point is occupied")
+	ErrOffBoard  = errors.New("point is off the board")
+	ErrSuicide   = errors.New("suicide is not allowed")
+	ErrKo        = errors.New("move repeats an earlier position (ko)")
 	ErrWrongTurn = errors.New("not this color's turn")
 )
 
