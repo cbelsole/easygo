@@ -13,7 +13,7 @@ import (
 
 // The integration tests need a real KataGo and are skipped without one.
 // Point EASYGO_KATAGO_DIR at a folder holding bin/katago.exe, analysis.cfg
-// and nets/*.bin.gz (see docs/katago.md).
+// and nets/*.bin.gz (scripts/setup-katago.ps1 creates that layout).
 func realConfig(t *testing.T) Config {
 	t.Helper()
 	dir := os.Getenv("EASYGO_KATAGO_DIR")
