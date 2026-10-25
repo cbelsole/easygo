@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { Color } from "../api/types";
 import { addGhost, removeLastGhost } from "./ghosts";
 

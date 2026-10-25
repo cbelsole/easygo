@@ -26,8 +26,8 @@ Features that need KataGo are disabled when it is not running.
 
 ## Quick start (Windows)
 
-Prerequisites: Go, and Node 22.18+ / 24.11+ / 26 (Vite+ requires it). `web/package.json` pins Node
-26.12.1 for [Volta](https://volta.sh), so if you use Volta, `npm` inside `web/` switches to it automatically
+Prerequisites: Go, [pnpm](https://pnpm.io) 12 (`volta install pnpm` or `npm i -g pnpm`; `packageManager` in `web/package.json` makes pnpm 10+ use the exact version), and Node 22.18+ / 24.11+ / 26 (Vite+ requires it). `web/package.json` pins Node
+26.12.1 for [Volta](https://volta.sh), so if you use Volta, `pnpm` inside `web/` switches to it automatically
 without touching your global Node. Without Volta, install a recent Node yourself.
 
 ```powershell
@@ -39,8 +39,8 @@ go run ./cmd/easygo fetch-joseki
 
 # 3. Frontend
 cd web
-npm install
-npm run build
+pnpm install
+pnpm run build
 cd ..
 
 # 4. Run
@@ -50,13 +50,13 @@ go run ./cmd/easygo
 Open http://127.0.0.1:8080 and sign in with a name (dev login is enabled automatically when the server
 listens on localhost and Google is not configured).
 
-To produce one self-contained executable that serves its own frontend (after `npm run build`):
+To produce one self-contained executable that serves its own frontend (after `pnpm run build`):
 
 ```powershell
 go build -tags embedweb -o bin\easygo.exe .\cmd\easygo
 ```
 
-For frontend development run the Go server as above and `npm run dev` inside `web/`
+For frontend development run the Go server as above and `pnpm run dev` inside `web/`
 (Vite+ on port 5173, proxying `/api` and `/auth` to the Go server).
 
 ## Configuration
@@ -110,7 +110,7 @@ quirks: tenuki as an empty move, mid-tree setup stones, duplicate variations.
 
 ```powershell
 go test ./...          # engine, rules, SGF, shapes, clock, joseki, auth, store, HTTP API
-cd web; npm test       # frontend logic
+cd web; pnpm test      # frontend logic
 ```
 
 The KataGo tests (`internal/katago`, `internal/server`) run against a real KataGo and are skipped

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { GroupAnalysis } from "../api/types";
 import { availability, groupStyles, territoryCells } from "./overlays";
 

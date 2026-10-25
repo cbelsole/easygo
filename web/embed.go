@@ -2,7 +2,7 @@
 
 // Package web exposes the built frontend (web/dist) for embedding in the
 // server binary. Build with: go build -tags embedweb ./cmd/easygo
-// after running `npm run build` in this directory.
+// after running `pnpm run build` in this directory.
 package web
 
 import (

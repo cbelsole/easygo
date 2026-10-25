@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { ClockView } from "../api/types";
 import { formatClock, isLow, readClock } from "./clock";
 
