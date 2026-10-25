@@ -41,6 +41,9 @@ type Server struct {
 	games  map[string]*session.Game
 	timers map[string]*time.Timer
 	busy   map[string]bool
+	// exampleOf remembers each user's open joseki-dictionary game; the tree is
+	// large and not saved, so only the latest one is kept in memory.
+	exampleOf map[string]string
 
 	kgMu     sync.RWMutex
 	kg       *katago.Client
@@ -79,7 +82,7 @@ func New(cfg Config) (*Server, error) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{
-		cfg: cfg, store: st, games: map[string]*session.Game{}, timers: map[string]*time.Timer{},
+		cfg: cfg, store: st, games: map[string]*session.Game{}, timers: map[string]*time.Timer{}, exampleOf: map[string]string{},
 		analysis: newAnalysisCache(), gpu: make(chan struct{}, 6), ctx: ctx, cancel: cancel,
 	}
 	s.auth = auth.New(cfg.Auth, st)

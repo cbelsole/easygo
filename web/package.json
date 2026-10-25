@@ -21,5 +21,8 @@
     "@vitejs/plugin-react": "^6.1.2",
     "typescript": "^7.0.2",
     "vite-plus": "^1.4.0"
+  },
+  "volta": {
+    "node": "26.12.1"
   }
 }

@@ -311,9 +311,13 @@ func (s *Server) handleJosekiExample(w http.ResponseWriter, r *http.Request) {
 	g := session.FromTree(t, session.ModeJoseki, u.ID)
 	g.Name = "Kogo's Joseki Dictionary"
 	s.mu.Lock()
+	if old := s.exampleOf[u.ID]; old != "" {
+		delete(s.games, old)
+	}
+	s.exampleOf[u.ID] = g.ID
 	s.games[g.ID] = g
 	s.mu.Unlock()
-	// Saving a 1 MB tree on every click would be wasteful; this set is rebuilt on demand.
+	// Not saved: a 1 MB tree per click would be wasteful, and the set is rebuilt on demand.
 	writeJSON(w, 201, g.View(u.ID))
 }
 

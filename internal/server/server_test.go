@@ -564,3 +564,28 @@ func TestOnlyAdminsChangeServerSettings(t *testing.T) {
 		t.Errorf("admin should see the paths, got %q", cfg.Katago.Config.Binary)
 	}
 }
+
+func TestJosekiExampleOpensAndReplacesItself(t *testing.T) {
+	e := newEnv(t, katago.Config{})
+	ann := e.login("Ann")
+	// Put a tiny dictionary where the server looks for it.
+	cache := filepath.Join(e.srv.cfg.DataDir, "cache")
+	os.MkdirAll(cache, 0o755)
+	os.WriteFile(filepath.Join(cache, "kogo-joseki-dictionary.sgf"),
+		[]byte("(;SZ[19](;B[pd];W[qf])(;B[qd];W[pf]))"), 0o644)
+
+	var first, second session.GameView
+	if code, body := ann.do("POST", "/api/joseki/example", nil, &first); code != 201 {
+		t.Fatalf("open: %d %s", code, body)
+	}
+	if first.Mode != session.ModeJoseki || len(first.Nodes) != 5 {
+		t.Fatalf("example: mode %s, %d nodes", first.Mode, len(first.Nodes))
+	}
+	ann.do("POST", "/api/joseki/example", nil, &second)
+	if code, _ := ann.do("GET", "/api/games/"+first.ID, nil, nil); code != 404 {
+		t.Errorf("the previous example game should be dropped: %d", code)
+	}
+	if code, _ := ann.do("GET", "/api/games/"+second.ID, nil, nil); code != 200 {
+		t.Errorf("the latest example game should be kept: %d", code)
+	}
+}
