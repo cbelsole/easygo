@@ -94,6 +94,12 @@ func run(args []string) error {
 	// Name-only sign-in is for local use. It is on only when Google is not
 	// configured and the server is bound to this machine, or when explicitly forced.
 	dev := (googleID == "" && loopback) || os.Getenv("EASYGO_DEV_LOGIN") == "1"
+	var admins []string
+	for _, a := range strings.Split(os.Getenv("EASYGO_ADMINS"), ",") {
+		if a = strings.TrimSpace(a); a != "" {
+			admins = append(admins, a)
+		}
+	}
 	if dev {
 		log.Printf("dev login is ON (anyone who can reach this server can sign in with any name)")
 	}
@@ -111,7 +117,7 @@ func run(args []string) error {
 
 	srv, err := server.New(server.Config{
 		DataDir: *data, WebDir: *web, KataGo: kcfg,
-		Auth: auth.Config{Secret: secret, BaseURL: *baseURL, GoogleID: googleID, GoogleSecret: googleSecret, DevLogin: dev},
+		Auth: auth.Config{Secret: secret, BaseURL: *baseURL, GoogleID: googleID, GoogleSecret: googleSecret, DevLogin: dev, Admins: admins},
 	})
 	if err != nil {
 		return err

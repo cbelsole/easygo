@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -161,6 +162,12 @@ func (s *Server) analyze(ctx context.Context, g *session.Game, nodeID, visits in
 		return c, nil
 	}
 	q.MaxVisits, q.Ownership = visits, true
+	select {
+	case s.gpu <- struct{}{}:
+		defer func() { <-s.gpu }()
+	default:
+		return nil, errBusy
+	}
 	resp, err := kg.Analyze(ctx, q)
 	if err != nil {
 		return nil, err
@@ -396,6 +403,12 @@ func (s *Server) judgeDead(g *session.Game) {
 	ctx, cancel := context.WithTimeout(s.ctx, 90*time.Second)
 	defer cancel()
 	res, err := s.analyze(ctx, g, 0, 400)
+	// A busy engine is temporary; scoring must not quietly fall back to
+	// "nothing is dead" just because other analyses were running.
+	for try := 0; try < 20 && errors.Is(err, errBusy); try++ {
+		time.Sleep(500 * time.Millisecond)
+		res, err = s.analyze(ctx, g, 0, 400)
+	}
 	if err != nil {
 		log.Printf("judge dead %s: %v", g.ID, err)
 		g.SetAutoDead(map[board.Point]bool{}) // fall back to "nothing dead"; players can mark by hand

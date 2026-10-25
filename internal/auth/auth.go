@@ -39,6 +39,8 @@ type Config struct {
 	GoogleSecret string
 	// DevLogin allows name-only sign-in. Never enable on a public server.
 	DevLogin bool
+	// Admins are email addresses allowed to change server settings.
+	Admins []string
 }
 
 type Auth struct {
@@ -68,6 +70,25 @@ func (a *Auth) GoogleEnabled() bool { return a.google != nil }
 
 // DevEnabled reports whether name-only sign-in is allowed.
 func (a *Auth) DevEnabled() bool { return a.cfg.DevLogin }
+
+// IsAdmin reports whether u may change server settings (KataGo paths,
+// dictionary downloads). With dev login on, the server is a personal one on
+// this machine and every user is its owner; otherwise only listed emails.
+func (a *Auth) IsAdmin(u store.User) bool {
+	if a.cfg.DevLogin {
+		return true
+	}
+	email := strings.ToLower(u.Email)
+	if email == "" {
+		return false
+	}
+	for _, adm := range a.cfg.Admins {
+		if strings.ToLower(strings.TrimSpace(adm)) == email {
+			return true
+		}
+	}
+	return false
+}
 
 // Register mounts the auth routes.
 func (a *Auth) Register(mux *http.ServeMux) {
@@ -129,12 +150,17 @@ func (a *Auth) User(r *http.Request) (store.User, bool) {
 	return u, err == nil
 }
 
-func (a *Auth) setSession(w http.ResponseWriter, userID string) {
+// SessionCookie is the signed cookie that signs userID in.
+func (a *Auth) SessionCookie(userID string) *http.Cookie {
 	exp := time.Now().Add(sessionTTL)
-	http.SetCookie(w, &http.Cookie{
+	return &http.Cookie{
 		Name: cookieName, Value: a.sign(userID, exp.Unix()), Path: "/", Expires: exp,
 		HttpOnly: true, Secure: a.secure, SameSite: http.SameSiteLaxMode,
-	})
+	}
+}
+
+func (a *Auth) setSession(w http.ResponseWriter, userID string) {
+	http.SetCookie(w, a.SessionCookie(userID))
 }
 
 func (a *Auth) logout(w http.ResponseWriter, r *http.Request) {

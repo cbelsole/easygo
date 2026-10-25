@@ -47,6 +47,8 @@ type Server struct {
 	kgErr    string
 	kgStart  bool // a start is in progress
 	analysis *analysisCache
+	// gpu bounds concurrent analyses so one user cannot starve the rest.
+	gpu chan struct{}
 
 	jMu    sync.RWMutex
 	joseki *joseki.DB
@@ -78,7 +80,7 @@ func New(cfg Config) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Server{
 		cfg: cfg, store: st, games: map[string]*session.Game{}, timers: map[string]*time.Timer{},
-		analysis: newAnalysisCache(), ctx: ctx, cancel: cancel,
+		analysis: newAnalysisCache(), gpu: make(chan struct{}, 6), ctx: ctx, cancel: cancel,
 	}
 	s.auth = auth.New(cfg.Auth, st)
 	s.loadSettings()
@@ -150,6 +152,8 @@ func statusFor(err error) int {
 	case errors.Is(err, session.ErrNotYourTurn), errors.Is(err, session.ErrNotPlaying),
 		errors.Is(err, session.ErrNotAtTip), errors.Is(err, session.ErrBadMode), errors.Is(err, session.ErrSeatTaken):
 		return http.StatusConflict
+	case errors.Is(err, errBusy):
+		return http.StatusTooManyRequests
 	case errors.Is(err, session.ErrUnknownNode), errors.Is(err, store.ErrNotFound):
 		return http.StatusNotFound
 	case errors.Is(err, board.ErrOccupied), errors.Is(err, board.ErrSuicide), errors.Is(err, board.ErrKo),
@@ -298,10 +302,13 @@ type katagoStatus struct {
 	Config    katago.Config `json:"config"`
 }
 
-func (s *Server) katagoStatus() katagoStatus {
+func (s *Server) katagoStatus(withPaths bool) katagoStatus {
 	s.kgMu.RLock()
 	defer s.kgMu.RUnlock()
-	st := katagoStatus{Starting: s.kgStart, Error: s.kgErr, Config: s.cfg.KataGo}
+	st := katagoStatus{Starting: s.kgStart, Error: s.kgErr}
+	if withPaths {
+		st.Config = s.cfg.KataGo
+	}
 	if s.kg != nil && s.kg.Running() {
 		st.Available, st.Version = true, s.kg.Version
 	}
@@ -373,3 +380,5 @@ func (s *Server) saveSettings() error {
 	}
 	return os.WriteFile(s.settingsPath(), b, 0o644)
 }
+
+var errBusy = errors.New("the analysis engine is busy; try again in a moment")

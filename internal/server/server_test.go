@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"easygo/internal/auth"
 	"easygo/internal/katago"
 	"easygo/internal/session"
+	"easygo/internal/store"
 )
 
 type testEnv struct {
@@ -381,7 +383,7 @@ func (e *testEnv) waitKataGo() {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	e.t.Fatalf("katago never became ready: %+v", e.srv.katagoStatus())
+	e.t.Fatalf("katago never became ready: %+v", e.srv.katagoStatus(true))
 }
 
 func TestAnalysisEndpointWithKataGo(t *testing.T) {
@@ -506,7 +508,59 @@ func TestKataGoSettingsPersist(t *testing.T) {
 
 	s2, _ := New(Config{DataDir: dir, Auth: cfg.Auth})
 	defer s2.Close()
-	if got := s2.katagoStatus().Config.Binary; got != "C:/nope/katago.exe" {
+	if got := s2.katagoStatus(true).Config.Binary; got != "C:/nope/katago.exe" {
 		t.Errorf("saved KataGo path not restored: %q", got)
+	}
+}
+
+// Changing which program the server launches is remote code execution on a
+// public server, so it must be limited to administrators.
+func TestOnlyAdminsChangeServerSettings(t *testing.T) {
+	srv, err := New(Config{
+		DataDir: t.TempDir(),
+		Auth:    auth.Config{Secret: auth.NewSecret(), BaseURL: "http://localhost", GoogleID: "c", GoogleSecret: "s", Admins: []string{"boss@example.com"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(srv.Handler())
+	defer func() { ts.Close(); srv.Close() }()
+	e := &testEnv{t, srv, ts}
+
+	as := func(id, email string) *client {
+		srv.store.UpsertUser(store.User{ID: id, Name: id, Email: email, Provider: "google"})
+		jar, _ := cookiejar.New(nil)
+		u, _ := url.Parse(ts.URL)
+		jar.SetCookies(u, []*http.Cookie{srv.auth.SessionCookie(id)})
+		return &client{e, &http.Client{Jar: jar}}
+	}
+	body := map[string]string{"binary": "C:/evil.exe", "model": "m", "config": "c"}
+
+	user := as("google:1", "someone@example.com")
+	if code, _ := user.do("PUT", "/api/katago", body, nil); code != 403 {
+		t.Errorf("non-admin PUT /api/katago: %d", code)
+	}
+	if code, _ := user.do("POST", "/api/joseki/fetch", nil, nil); code != 403 {
+		t.Errorf("non-admin joseki fetch: %d", code)
+	}
+	anon := &client{e, &http.Client{}}
+	if code, _ := anon.do("PUT", "/api/katago", body, nil); code != 401 {
+		t.Errorf("anonymous PUT: %d", code)
+	}
+	// File paths are not shown to ordinary users.
+	var cfg struct {
+		Katago struct{ Config struct{ Binary string } }
+	}
+	user.do("GET", "/api/config", nil, &cfg)
+	if cfg.Katago.Config.Binary != "" {
+		t.Errorf("paths leaked to a non-admin: %q", cfg.Katago.Config.Binary)
+	}
+	boss := as("google:2", "boss@example.com")
+	if code, _ := boss.do("PUT", "/api/katago", body, nil); code != 202 {
+		t.Errorf("admin PUT: %d", code)
+	}
+	boss.do("GET", "/api/config", nil, &cfg)
+	if cfg.Katago.Config.Binary != "C:/evil.exe" {
+		t.Errorf("admin should see the paths, got %q", cfg.Katago.Config.Binary)
 	}
 }

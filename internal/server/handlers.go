@@ -50,7 +50,7 @@ func (s *Server) routes() {
 	m.HandleFunc("GET /api/games/{id}/shapes", s.handleShapes)
 	m.HandleFunc("GET /api/games/{id}/joseki", s.handleJosekiMatch)
 
-	m.HandleFunc("GET /api/katago", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, s.katagoStatus()) })
+	m.HandleFunc("GET /api/katago", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, s.katagoStatus(s.isAdmin(r))) })
 	m.HandleFunc("PUT /api/katago", s.handleKataGoConfig)
 	m.HandleFunc("GET /api/joseki", func(w http.ResponseWriter, r *http.Request) {
 		s.jMu.RLock()
@@ -101,7 +101,7 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{
 		"presets":    presets,
 		"sizes":      []int{9, 13, 19},
-		"katago":     s.katagoStatus(),
+		"katago":     s.katagoStatus(s.isAdmin(r)),
 		"joseki":     ji,
 		"googleAuth": s.auth.GoogleEnabled(),
 		"devLogin":   s.auth.DevEnabled(),
@@ -633,8 +633,21 @@ func (s *Server) handleAssist(w http.ResponseWriter, r *http.Request) {
 
 // ---- admin-ish --------------------------------------------------------
 
+// admin returns the signed-in user if they may change server settings.
+func (s *Server) admin(w http.ResponseWriter, r *http.Request) (store.User, bool) {
+	u, ok := s.need(w, r)
+	if !ok {
+		return u, false
+	}
+	if !s.auth.IsAdmin(u) {
+		writeJSON(w, http.StatusForbidden, apiError{"only the server's administrator can change this"})
+		return u, false
+	}
+	return u, true
+}
+
 func (s *Server) handleKataGoConfig(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.need(w, r); !ok {
+	if _, ok := s.admin(w, r); !ok {
 		return
 	}
 	var c struct{ Binary, Model, Config string }
@@ -650,11 +663,11 @@ func (s *Server) handleKataGoConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.StartKataGo()
-	writeJSON(w, 202, s.katagoStatus())
+	writeJSON(w, 202, s.katagoStatus(true))
 }
 
 func (s *Server) handleJosekiFetch(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.need(w, r); !ok {
+	if _, ok := s.admin(w, r); !ok {
 		return
 	}
 	if err := s.fetchJoseki(r.Context()); err != nil {
@@ -664,4 +677,10 @@ func (s *Server) handleJosekiFetch(w http.ResponseWriter, r *http.Request) {
 	s.jMu.RLock()
 	defer s.jMu.RUnlock()
 	writeJSON(w, 200, s.jInfo)
+}
+
+// isAdmin reports whether the request is from a signed-in administrator.
+func (s *Server) isAdmin(r *http.Request) bool {
+	u, ok := s.auth.User(r)
+	return ok && s.auth.IsAdmin(u)
 }

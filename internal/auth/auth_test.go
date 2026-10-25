@@ -174,3 +174,19 @@ func TestGoogleCallbackRejectsBadState(t *testing.T) {
 		}
 	}
 }
+
+func TestIsAdmin(t *testing.T) {
+	dev, _ := newAuth(t, Config{DevLogin: true})
+	if !dev.IsAdmin(store.User{ID: "dev:x"}) {
+		t.Error("with dev login the local user owns the server")
+	}
+	a, _ := newAuth(t, Config{GoogleID: "c", GoogleSecret: "s", Admins: []string{" Boss@Example.com "}})
+	if !a.IsAdmin(store.User{Email: "boss@example.com"}) {
+		t.Error("listed admin (case and spaces ignored) rejected")
+	}
+	for _, u := range []store.User{{Email: "someone@example.com"}, {Email: ""}, {ID: "google:1"}} {
+		if a.IsAdmin(u) {
+			t.Errorf("%+v must not be admin", u)
+		}
+	}
+}
